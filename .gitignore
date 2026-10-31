@@ -1,0 +1,84 @@
+# ==============================================================================
+# Sortfolio .gitignore
+# Prevents accidental leak of sensitive credentials, environment variables,
+# build artifacts, OS junk, and local development configurations.
+# ==============================================================================
+
+# Environment files & Secrets (CRITICAL: Never commit secrets)
+.env
+.env.*
+!.env.example
+*.env
+*.pem
+*.key
+*.cert
+secrets/
+private/
+credentials.json
+token.json
+service_account.json
+*service_role*
+
+# Supabase Local Development
+.supabase/
+supabase/.branches/
+supabase/.temp/
+supabase/functions/.env
+supabase/functions/**/.env
+
+# Node.js & Dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.pnp
+.pnp.js
+
+# Deno Cache
+.deno/
+
+# Python (Static Analysis Engine & Local Tests)
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+ENV/
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+
+# OS Specific
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+[Dd]esktop.ini
+
+# IDE & Editor Specific
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+.idea/
+*.sublime-project
+*.sublime-workspace
+*.swp
+*.swo
+*~
+
+# Temporary & Log files
+*.log
+logs/
+temp/
+tmp/
+*.tmp
+scratch/

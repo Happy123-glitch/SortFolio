@@ -1,0 +1,54 @@
+[
+  {
+    "id": "sample-flask-supported",
+    "title": "Flask: add_url_rule parameter verification",
+    "badge": "Supported Case",
+    "badgeType": "success",
+    "repo": "pallets/flask",
+    "issueNumber": 5240,
+    "claimText": "add_url_rule accepts parameter provide_automatic_options",
+    "claimType": "parameter_existence",
+    "targetFile": "src/flask/app.py",
+    "expectedStatus": "supported",
+    "description": "Validates that Flask's URL routing function officially declares the automatic options handling argument."
+  },
+  {
+    "id": "sample-flask-contradicted",
+    "title": "Flask: False claim about instance_path absence",
+    "badge": "Contradicted Case",
+    "badgeType": "danger",
+    "repo": "pallets/flask",
+    "issueNumber": 4912,
+    "claimText": "Flask.__init__ has no parameter named instance_path",
+    "claimType": "parameter_existence",
+    "targetFile": "src/flask/app.py",
+    "expectedStatus": "contradicted",
+    "description": "Catches a false bug report claiming instance_path is missing when it is declared in the __init__ signature."
+  },
+  {
+    "id": "sample-runtime-unverified",
+    "title": "Requests: Vague OS-specific runtime crash",
+    "badge": "Unverified Case",
+    "badgeType": "warning",
+    "repo": "psf/requests",
+    "issueNumber": 6180,
+    "claimText": "Requests causes segfault in OpenSSL on custom embedded MIPS build",
+    "claimType": "runtime_behavior",
+    "targetFile": "requests/sessions.py",
+    "expectedStatus": "unverified",
+    "description": "Correctly flags runtime behavior as Unverified instead of hallucinating or making an unsupported guess."
+  },
+  {
+    "id": "sample-fastapi-supported",
+    "title": "FastAPI: APIRouter dependencies declaration",
+    "badge": "Supported Case",
+    "badgeType": "success",
+    "repo": "tiangolo/fastapi",
+    "issueNumber": 9820,
+    "claimText": "APIRouter accepts dependencies parameter in definition",
+    "claimType": "parameter_existence",
+    "targetFile": "fastapi/routing.py",
+    "expectedStatus": "supported",
+    "description": "Verifies that APIRouter constructor officially takes dependency injection list."
+  }
+]

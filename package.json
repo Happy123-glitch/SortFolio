@@ -1,0 +1,22 @@
+{
+  "name": "sortfolio",
+  "version": "0.1.0",
+  "description": "Evidence-Based Open Source Issue and Pull Request Triage",
+  "type": "module",
+  "main": "js/app.js",
+  "scripts": {
+    "test": "node --experimental-strip-types --test tests/**/*.test.js"
+  },
+  "keywords": [
+    "triage",
+    "github",
+    "evidence",
+    "open-source",
+    "supabase"
+  ],
+  "author": "Sortfolio Team",
+  "license": "MIT",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.118.0"
+  }
+}

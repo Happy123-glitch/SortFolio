@@ -1,0 +1,93 @@
+{
+  "run": {
+    "id": "e4f8b2d1-91a0-4b5c-8df2-78d1e23f9901",
+    "repo_full_name": "pallets/flask",
+    "item_type": "issue",
+    "item_number": 5240,
+    "commit_sha": "d3b07384d113edec49eaa6238ad5ff00",
+    "status": "completed",
+    "metadata": {
+      "title": "Flask URL routing parameter verification",
+      "author": "open-source-contributor",
+      "labels": ["triage", "verified-evidence"],
+      "htmlUrl": "https://github.com/pallets/flask/issues/5240",
+      "defaultBranch": "main"
+    },
+    "created_at": "2026-10-31T22:00:00.000Z",
+    "finished_at": "2026-10-31T22:00:02.450Z"
+  },
+  "claims": [
+    {
+      "id": "c1a93b20-11ef-498b-9023-abc123def456",
+      "run_id": "e4f8b2d1-91a0-4b5c-8df2-78d1e23f9901",
+      "original_text": "add_url_rule accepts parameter provide_automatic_options",
+      "claim_type": "parameter_existence",
+      "status": "supported",
+      "confidence_rationale": "Inspected function 'add_url_rule' in src/flask/app.py explicitly includes parameter 'provide_automatic_options'.",
+      "explanation": "Deterministic static analysis confirmed that 'add_url_rule' in src/flask/app.py (lines 14–21) formally declares 'provide_automatic_options: bool = None' in its signature.",
+      "created_at": "2026-10-31T22:00:01.200Z",
+      "evidence": [
+        {
+          "id": "e81d77a0-fa41-450b-8109-123456abcdef",
+          "claim_id": "c1a93b20-11ef-498b-9023-abc123def456",
+          "file_path": "src/flask/app.py",
+          "line_start": 14,
+          "line_end": 21,
+          "snippet": "    def add_url_rule(\n        self,\n        rule: str,\n        endpoint: str = None,\n        view_func = None,\n        provide_automatic_options: bool = None,\n        **options\n    ):",
+          "source_url": "https://github.com/pallets/flask/blob/d3b07384d113edec49eaa6238ad5ff00/src/flask/app.py#L14-L21",
+          "relation": "supporting",
+          "created_at": "2026-10-31T22:00:01.800Z"
+        }
+      ]
+    },
+    {
+      "id": "c2b04c31-22fe-4a9c-9134-bcd234efg567",
+      "run_id": "e4f8b2d1-91a0-4b5c-8df2-78d1e23f9901",
+      "original_text": "Flask.__init__ has no parameter named instance_path",
+      "claim_type": "parameter_existence",
+      "status": "contradicted",
+      "confidence_rationale": "Direct inspection of function '__init__' in src/flask/app.py confirms parameter 'instance_path' is present.",
+      "explanation": "The claim asserts that Flask.__init__ lacks parameter 'instance_path', but the inspected constructor in src/flask/app.py (lines 5–10) explicitly declares it as a keyword parameter.",
+      "created_at": "2026-10-31T22:00:01.900Z",
+      "evidence": [
+        {
+          "id": "e92e88b1-0b52-461c-9210-234567bcdefa",
+          "claim_id": "c2b04c31-22fe-4a9c-9134-bcd234efg567",
+          "file_path": "src/flask/app.py",
+          "line_start": 5,
+          "line_end": 10,
+          "snippet": "    def __init__(\n        self,\n        import_name: str,\n        static_url_path: str = None,\n        instance_path: str = None,\n    ) -> None:",
+          "source_url": "https://github.com/pallets/flask/blob/d3b07384d113edec49eaa6238ad5ff00/src/flask/app.py#L5-L10",
+          "relation": "conflicting",
+          "created_at": "2026-10-31T22:00:02.100Z"
+        }
+      ]
+    }
+  ],
+  "modelRuns": [
+    {
+      "id": "m1f72a91-44ab-4cd8-8812-345678cdefab",
+      "run_id": "e4f8b2d1-91a0-4b5c-8df2-78d1e23f9901",
+      "provider": "ollama",
+      "model_id": "qwen2.5:7b",
+      "task": "claim_extraction",
+      "prompt_version": "v1.0",
+      "outcome": "success",
+      "latency_ms": 1120,
+      "metadata": { "extractedCount": 2 },
+      "created_at": "2026-10-31T22:00:01.150Z"
+    },
+    {
+      "id": "m2a83b02-55bc-4de9-9923-456789defabc",
+      "run_id": "e4f8b2d1-91a0-4b5c-8df2-78d1e23f9901",
+      "provider": "ollama",
+      "model_id": "qwen2.5:7b",
+      "task": "evidence_explanation",
+      "prompt_version": "v1.0",
+      "outcome": "success",
+      "latency_ms": 640,
+      "metadata": {},
+      "created_at": "2026-10-31T22:00:02.050Z"
+    }
+  ]
+}

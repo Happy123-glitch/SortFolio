@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-10-31T21:39:50.392Z",
+  "timestamp": "2026-10-31T22:38:11.646Z",
   "totalCases": 4,
   "precisionPercent": 100,
   "uncertaintyQualityPercent": 100,
@@ -15,7 +15,7 @@
       "pass": true,
       "hasTraceableEvidence": true,
       "evidenceLines": "12–19",
-      "latencyMs": 10.26
+      "latencyMs": 10.31
     },
     {
       "id": "sample-flask-contradicted",
@@ -26,7 +26,7 @@
       "pass": true,
       "hasTraceableEvidence": true,
       "evidenceLines": "3–8",
-      "latencyMs": 2.1
+      "latencyMs": 0.25
     },
     {
       "id": "sample-runtime-unverified",
@@ -37,7 +37,7 @@
       "pass": true,
       "hasTraceableEvidence": false,
       "evidenceLines": "N/A",
-      "latencyMs": 0.08
+      "latencyMs": 0.05
     },
     {
       "id": "sample-fastapi-supported",
@@ -48,7 +48,7 @@
       "pass": true,
       "hasTraceableEvidence": true,
       "evidenceLines": "2–2",
-      "latencyMs": 0.14
+      "latencyMs": 0.05
     }
   ]
 }

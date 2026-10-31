@@ -18,6 +18,7 @@
     <button class="nav-btn" data-view="feedback" id="navFeedbackBtn">💬 Feedback</button>
   </nav>
   <div class="user">
+    <button type="button" class="btn-ghost sm" id="navGhTokenBtn" title="GitHub API Key Settings" style="display:flex;align-items:center;gap:6px;padding:4px 10px;font-size:12px;border:1px solid rgba(255,255,255,0.15);border-radius:14px;cursor:pointer;"><span id="navGhTokenDot" style="color:var(--gold);">🔑</span> <span id="navGhTokenLabel">GitHub Key</span></button>
     <span class="mode-pill" id="modePill">Admin</span>
     <button class="avatar" id="avatarBtn" type="button" title="View profile" aria-label="View profile">AD</button>
     <button class="btn-ghost logout-btn" id="logoutBtn" type="button">Log out</button>
@@ -334,6 +335,24 @@
       <div class="actions"><button class="btn-gold" type="submit">Save settings</button><button class="btn-ghost auto" type="button" id="resetSettings">Reset to defaults</button></div>
       <p class="saved" id="settingsSaved" role="status"></p>
     </form>
+    <div class="panel" id="ghTokenSettingsPanel">
+      <h3>🔑 GitHub Official Integration &amp; API Key</h3>
+      <p class="muted small">Required to perform official merges and commit triage audit documentation directly to your repositories.</p>
+      <div class="form-grid" style="margin-top:10px;">
+        <label class="wide">GitHub Personal Access Token (classic with <code>repo</code> scope)
+          <div style="display:flex; gap:8px;">
+            <input class="in" id="settingsGhToken" type="password" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" style="flex:1;">
+            <button type="button" class="btn-outline sm" id="settingsToggleGhTokenVisBtn">👁</button>
+          </div>
+        </label>
+      </div>
+      <div id="settingsGhTokenStatus" style="margin-top:10px; font-size:12.5px;"></div>
+      <div class="actions" style="margin-top:14px;">
+        <button class="btn-gold" type="button" id="settingsSaveGhTokenBtn">Save &amp; Verify Token</button>
+        <button class="btn-ghost auto" type="button" id="settingsClearGhTokenBtn">Clear Token</button>
+        <a href="https://github.com/settings/tokens/new?scopes=repo&description=SortFolio+Triage+Merge" target="_blank" rel="noopener" class="btn-outline auto" style="font-size:12px;text-decoration:none;display:inline-flex;align-items:center;">Create Token on GitHub ↗</a>
+      </div>
+    </div>
     <aside class="side">
       <div class="panel"><h3>👤 Account</h3>
         <dl class="kv small"><dt>Name</dt><dd id="acName"></dd><dt>Mode</dt><dd id="acMode"></dd><dt>Storage</dt><dd id="acStore"></dd></dl></div>
@@ -641,9 +660,100 @@
         <!-- Action Footer -->
         <div class="diag-footer">
           <button type="button" class="btn-gold sm" id="diagRunTriageBtn">⚡ Run Full AST Triage</button>
+          <button type="button" class="btn-merge-item sm" id="diagMergeBtn">🔀 Merge in GitHub Official</button>
           <button type="button" class="btn-outline sm" id="diagCompareBtn">⇄ Open in Compare View</button>
           <button type="button" class="btn-ghost sm" id="diagCloseBtn">Close</button>
         </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- GITHUB TOKEN DEMAND MODAL -->
+<div class="portfolio-modal-backdrop" id="githubTokenModal" hidden>
+  <div class="portfolio-modal" style="max-width:540px;">
+    <div class="portfolio-modal-head">
+      <div>
+        <h3 style="display:flex;align-items:center;gap:8px;">🔑 GitHub API Key Required</h3>
+        <p class="muted small">Required to perform official PR merges and commit triage audit documentation.</p>
+      </div>
+      <button type="button" class="btn-ghost sm" id="closeGhTokenModalBtn">✕</button>
+    </div>
+    <div class="portfolio-modal-body" style="padding:16px 20px;">
+      <p class="muted small" style="margin-bottom:12px;">
+        To merge pull requests into official GitHub repositories and commit audit documentation files (<code>docs/triage/</code>), SortFolio requires a GitHub Personal Access Token with <strong>repo</strong> write permissions.
+      </p>
+      <div style="background:rgba(217,119,6,0.1); border:1px solid rgba(217,119,6,0.3); padding:10px 14px; border-radius:8px; font-size:12px; margin-bottom:16px; color:#fbbf24;">
+        🔒 <strong>Client-Side Security</strong>: Your token is stored only in your local browser storage and is sent directly to GitHub's official API. It is never logged or stored on any server.
+      </div>
+      <div class="form-grid" style="margin-bottom:12px;">
+        <label class="wide">Personal Access Token
+          <div style="display:flex; gap:8px;">
+            <input class="in" id="modalGhTokenInput" type="password" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" style="flex:1;">
+            <button type="button" class="btn-outline sm" id="modalToggleTokenVisibilityBtn" title="Toggle visibility">👁</button>
+          </div>
+        </label>
+      </div>
+      <div id="modalGhTokenFeedback" style="font-size:12px; margin-bottom:14px; min-height:18px;"></div>
+      <div class="portfolio-modal-foot" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; border-top:1px solid var(--line); padding-top:14px;">
+        <a href="https://github.com/settings/tokens/new?scopes=repo&description=SortFolio+Triage+Merge" target="_blank" rel="noopener" style="font-size:12px; color:var(--gold); text-decoration:none;">Generate Token on GitHub ↗</a>
+        <div style="display:flex; gap:8px;">
+          <button type="button" class="btn-ghost sm" id="modalCancelGhTokenBtn">Cancel</button>
+          <button type="button" class="btn-gold sm" id="modalSaveGhTokenBtn">Verify &amp; Save Token</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- GITHUB OFFICIAL MERGE MODAL -->
+<div class="portfolio-modal-backdrop" id="githubMergeModal" hidden>
+  <div class="portfolio-modal" style="max-width:680px;">
+    <div class="portfolio-modal-head">
+      <div>
+        <h3 id="mergeModalTitle" style="display:flex;align-items:center;gap:8px;">🔀 Merge in Official GitHub</h3>
+        <p class="muted small" id="mergeModalSubtitle">PR #1 in Happy123-glitch/SortFolio</p>
+      </div>
+      <button type="button" class="btn-ghost sm" id="closeMergeModalBtn">✕</button>
+    </div>
+    <div class="portfolio-modal-body" style="padding:16px 20px; max-height:75vh; overflow-y:auto;">
+      <div class="form-grid">
+        <label class="wide">Merge Method
+          <select class="select in" id="mergeMethodSelect">
+            <option value="merge">Create a merge commit (Standard Merge)</option>
+            <option value="squash" selected>Squash and merge (Recommended)</option>
+            <option value="rebase">Rebase and merge</option>
+          </select>
+        </label>
+        <label class="wide">Maintainer Triage Rationale (Why this PR is being merged)
+          <textarea class="in" id="mergeRationaleInput" rows="3" placeholder="Explain why this pull request is being merged and verified..."></textarea>
+        </label>
+      </div>
+
+      <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.1); border-radius:8px; padding:12px 14px; margin:14px 0;">
+        <label class="check-row" style="margin-bottom:8px; font-weight:600; color:var(--text); cursor:pointer;">
+          <input type="checkbox" id="mergeCommitDocCheckbox" checked>
+          Add Changes Made in Docs to That Repo (<code>docs/triage/PR-*-MERGE-AUDIT.md</code>)
+        </label>
+        <p class="muted small" style="margin-left:24px; margin-bottom:10px;">
+          Automatically saves full triage evidence, AST proof, and why-merged justification as a permanent documentation record in the repository.
+        </p>
+        <label class="check-row" style="font-weight:600; color:var(--text); cursor:pointer;">
+          <input type="checkbox" id="mergePostCommentCheckbox" checked>
+          Post official SortFolio triage comment on GitHub PR conversation thread
+        </label>
+      </div>
+
+      <details style="margin-bottom:14px; background:rgba(0,0,0,0.2); border-radius:6px; padding:8px 12px;" id="mergeDocDetails">
+        <summary style="cursor:pointer; font-size:12px; color:var(--gold); font-weight:600;">Preview Generated In-Repo Documentation (Markdown)</summary>
+        <pre id="mergeDocPreviewText" style="font-size:11px; max-height:160px; overflow-y:auto; margin-top:8px; white-space:pre-wrap; color:#cbd5e1;"></pre>
+      </details>
+
+      <div id="mergeModalFeedback" style="font-size:12px; margin-bottom:12px; min-height:18px;"></div>
+
+      <div class="portfolio-modal-foot" style="display:flex; justify-content:flex-end; gap:8px; border-top:1px solid var(--line); padding-top:14px;">
+        <button type="button" class="btn-ghost sm" id="cancelMergeBtn">Cancel</button>
+        <button type="button" class="btn-merge-item sm" id="confirmMergeBtn">🚀 Merge in Official GitHub</button>
       </div>
     </div>
   </div>
@@ -663,6 +773,7 @@
 <script src="js/feedback.js"></script>
 <script src="js/users.js"></script>
 <script src="js/ai-diagnostic.js"></script>
+<script src="js/github-merge.js"></script>
 <script src="js/app.js"></script>
 <script src="js/pages.js"></script>
 </body>

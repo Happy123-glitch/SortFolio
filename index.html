@@ -211,6 +211,38 @@
 </section>
 </main>
 
+<!-- Sortfolio AI Triage Assistant Widget -->
+<button class="chat-fab" id="chatFab" type="button" aria-label="Open Sortfolio AI Assistant">
+  <span class="fab-dot"></span>
+  <span>💬 AI Triage Assistant</span>
+</button>
+
+<div class="chat-drawer" id="chatDrawer" hidden>
+  <div class="chat-head">
+    <div class="chat-head-title">
+      <span>💬 Sortfolio Assistant</span>
+      <span class="chat-head-badge">Qwen 2.5 7B</span>
+    </div>
+    <button class="chat-close-btn" id="chatCloseBtn" type="button" title="Close Assistant">✕</button>
+  </div>
+  <div class="chat-context-bar" id="chatContextBar">
+    <span>Inspecting:</span> <strong id="chatContextRepo">pallets/flask #5240</strong>
+  </div>
+  <div class="chat-quick-pills">
+    <button type="button" class="chat-pill" data-prompt="Explain why this claim is contradicted">💡 Explain Contradiction</button>
+    <button type="button" class="chat-pill" data-prompt="Draft a polite maintainer reply to the contributor">📝 Draft Reply</button>
+    <button type="button" class="chat-pill" data-prompt="Show verified file locations and line numbers">📍 Show Code Lines</button>
+    <button type="button" class="chat-pill" data-prompt="What evidence is missing or unverified?">❓ Missing Evidence?</button>
+  </div>
+  <div class="chat-feed" id="chatFeed">
+    <div class="chat-msg assistant">👋 Hello maintainer! I'm your Sortfolio Triage Assistant. I can explain code evidence, draft maintainer replies, or clarify why claims are contradicted or unverified. How can I help?</div>
+  </div>
+  <form class="chat-input-bar" id="chatForm">
+    <input type="text" id="chatInput" placeholder="Ask about this issue or evidence..." autocomplete="off">
+    <button type="submit" class="chat-send-btn" id="chatSendBtn">Send</button>
+  </form>
+</div>
+
 <!-- Templates (cloned by js/app.js) -->
 <template id="tpl-recent"><li class="recent-item"><span class="gh-dot">●</span><div class="grow"><b data-f="title"></b><small data-f="sub"></small></div><div class="r-right"><small data-f="time"></small><span class="chip" data-f="status"></span></div></li></template>
 <template id="tpl-claim"><li class="claim"><span class="num" data-f="num"></span><div class="grow"><b data-f="text"></b><small data-f="where"></small></div><span class="chip" data-f="status"></span><button class="btn-outline sm" data-f="view" type="button">View Details →</button></li></template>

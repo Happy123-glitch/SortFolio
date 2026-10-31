@@ -50,6 +50,59 @@ export class SortfolioAPI {
   }
 
   /**
+   * Trigger backend analysis of a GitHub Pull Request (Secondary Workflow).
+   * @param {string} repo - Format "owner/repository"
+   * @param {number} prNumber - Positive pull request number
+   * @returns {Promise<Object>}
+   */
+  async analyzePullRequest(repo, prNumber) {
+    const edgeFunctionUrl = `${this.supabaseUrl}/functions/v1/analyze-pr`;
+    const response = await fetch(edgeFunctionUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': this.supabaseAnonKey,
+        'Authorization': `Bearer ${this.supabaseAnonKey}`,
+      },
+      body: JSON.stringify({ repo, prNumber: Number(prNumber) }),
+    });
+
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({ message: response.statusText }));
+      throw new Error(err.error || err.message || `PR analysis failed (${response.status})`);
+    }
+
+    return await response.json();
+  }
+
+  /**
+   * Ask the Conversational Triage Assistant about the current issue or evidence.
+   * @param {string} message - Maintainer question or prompt
+   * @param {Object} report - Current analysis report context
+   * @returns {Promise<Object>}
+   */
+  async askAssistant(message, report) {
+    const edgeFunctionUrl = `${this.supabaseUrl}/functions/v1/chat-assistant`;
+    const response = await fetch(edgeFunctionUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': this.supabaseAnonKey,
+        'Authorization': `Bearer ${this.supabaseAnonKey}`,
+      },
+      body: JSON.stringify({ message, report }),
+    });
+
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({ message: response.statusText }));
+      throw new Error(err.error || err.message || `Assistant request failed (${response.status})`);
+    }
+
+    return await response.json();
+  }
+
+
+  /**
    * Fetch an existing completed analysis run with claims and evidence items.
    * @param {string} repo
    * @param {number} issueNumber

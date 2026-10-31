@@ -26,8 +26,8 @@
   var userName = sessionStorage.getItem("sf_name") || "";
   var modeLabel = { demo: "Demo", admin: "Admin", user: "User" }[mode] || "User";
   $("modePill").textContent = modeLabel;
-  $("logoutBtn").textContent = (userName || modeLabel).split(/\s+/).map(function (w) { return w[0]; }).join("").slice(0, 2).toUpperCase();
-  $("logoutBtn").title = "Log out" + (userName ? " (" + userName + ")" : "");
+  $("avatarBtn").textContent = (userName || modeLabel).split(/\s+/).map(function (w) { return w[0]; }).join("").slice(0, 2).toUpperCase();
+  $("avatarBtn").title = "View profile" + (userName ? " (" + userName + ")" : "");
 
   function setView(name) {
     if (name === "feedback") {
@@ -50,6 +50,8 @@
   $$("[data-goto]").forEach(function (b) { b.addEventListener("click", function () { setView(b.dataset.goto); }); });
   $("logoutBtn").addEventListener("click", function () {
     sessionStorage.removeItem("sf_mode");
+    sessionStorage.removeItem("sf_name");
+    sessionStorage.removeItem("sf_email");
     document.body.classList.add("leaving");
     setTimeout(function () { location.href = "login.html"; }, 300);
   });
@@ -148,12 +150,89 @@
   /* ---------- local code comparison ---------- */
   var currentPatch = "";
 
+  function clearFixSuggestions() {
+    fill($("compareSuggestionList"), []);
+    $("compareSuggestions").hidden = true;
+    $("compareSuggestionsEmpty").hidden = true;
+  }
+
   function clearCompareOutput(message) {
     fill($("compareDiff"), []);
     $("compareSummary").textContent = message;
     $("compareCopyBtn").disabled = true;
     $("compareDownloadBtn").disabled = true;
     currentPatch = "";
+    clearFixSuggestions();
+  }
+
+  function renderFixSuggestions(rows, afterText) {
+    var language = $("compareLanguage").value;
+    var suggestions = window.SortfolioDiff.suggestFixes(rows, language);
+    $("compareSuggestions").hidden = false;
+    $("compareSuggestionsEmpty").hidden = suggestions.length > 0;
+    if (!suggestions.length) {
+      $("compareSuggestionsEmpty").textContent = language === "other"
+        ? "Quick fix suggestions are currently available only for JavaScript and TypeScript."
+        : "No supported common issues were found on the added lines.";
+    }
+    fill($("compareSuggestionList"), suggestions.map(function (suggestion) {
+      var item = document.createElement("li");
+      item.className = "fix-suggestion";
+      var details = document.createElement("div");
+      var title = document.createElement("strong");
+      title.textContent = suggestion.title;
+      var reason = document.createElement("p");
+      reason.className = "muted small";
+      reason.textContent = suggestion.reason;
+      var line = document.createElement("small");
+      line.className = "fix-suggestion-line";
+      line.textContent = "Added line " + suggestion.lineNo;
+      var button = document.createElement("button");
+      button.className = "btn-outline sm";
+      button.type = "button";
+      button.textContent = "Preview fix";
+      var preview = document.createElement("div");
+      preview.className = "fix-inline-preview";
+      preview.hidden = true;
+      var previewText = document.createElement("p");
+      previewText.className = "muted small";
+      previewText.textContent = suggestion.reason;
+      var previewLine = document.createElement("pre");
+      previewLine.className = "fix-inline-code";
+      previewLine.textContent = suggestion.after || "(line removed)";
+      var applyButton = document.createElement("button");
+      applyButton.className = "btn-gold sm";
+      applyButton.type = "button";
+      applyButton.textContent = "Apply to After";
+      applyButton.hidden = true;
+      button.addEventListener("click", function () {
+        preview.hidden = false;
+        applyButton.hidden = false;
+        $("compareFeedback").textContent = "";
+      });
+      applyButton.addEventListener("click", function () {
+        var output = window.SortfolioDiff.applySuggestion($("compareUpdatedInput").value, suggestion);
+        if (output === null) {
+          $("compareFeedback").textContent = "This suggestion no longer matches the After code. Render the diff again.";
+          return;
+        }
+        $("compareUpdatedInput").value = output;
+        renderCompareDiff();
+        $("compareFeedback").textContent = "Fix applied. The corrected code is in After.";
+        $("compareUpdatedInput").scrollIntoView({ behavior: "smooth", block: "center" });
+        $("compareUpdatedInput").focus({ preventScroll: true });
+      });
+      preview.appendChild(previewText);
+      preview.appendChild(previewLine);
+      preview.appendChild(applyButton);
+      details.appendChild(title);
+      details.appendChild(reason);
+      details.appendChild(line);
+      details.appendChild(preview);
+      item.appendChild(details);
+      item.appendChild(button);
+      return item;
+    }));
   }
 
   function renderCompareDiff() {
@@ -166,6 +245,7 @@
     }
 
     var diff = window.SortfolioDiff.buildDiff(beforeText, afterText);
+    clearFixSuggestions();
     fill($("compareDiff"), diff.rows.map(function (line) {
       var row = document.createElement("div");
       row.className = "diff-line diff-" + line.type;
@@ -209,6 +289,7 @@
     if (diff.simplified) summary += " Large input: showing a full replacement to keep comparison responsive.";
     $("compareSummary").textContent = summary;
     currentPatch = window.SortfolioDiff.createPatch(beforeText, afterText);
+    renderFixSuggestions(diff.rows, afterText);
     $("compareCopyBtn").disabled = false;
     $("compareDownloadBtn").disabled = false;
     $("compareFeedback").textContent = "";
@@ -220,6 +301,24 @@
   }
 
   $("compareRenderBtn").addEventListener("click", renderCompareDiff);
+  $("compareAutoCorrectBtn").addEventListener("click", function () {
+    var beforeText = $("compareOriginalInput").value;
+    if (!beforeText.trim()) {
+      $("compareFeedback").textContent = "Paste code in Before first.";
+      $("compareOriginalInput").focus();
+      return;
+    }
+
+    var result = window.SortfolioDiff.generateCorrections(beforeText, $("compareLanguage").value);
+    $("compareUpdatedInput").value = result.text;
+    renderCompareDiff();
+    $("compareFeedback").textContent = result.applied
+      ? "Generated an After copy with " + result.applied + " supported fix" + (result.applied === 1 ? "" : "es") + ". Before is unchanged."
+      : "No supported fixes found; copied Before unchanged to After.";
+    $("compareUpdatedInput").scrollIntoView({ behavior: "smooth", block: "center" });
+    $("compareUpdatedInput").focus({ preventScroll: true });
+  });
+  $("compareLanguage").addEventListener("change", renderCompareDiff);
   $("compareOriginalInput").addEventListener("input", invalidateCompareOutput);
   $("compareUpdatedInput").addEventListener("input", invalidateCompareOutput);
   $("compareCopyBtn").addEventListener("click", async function () {

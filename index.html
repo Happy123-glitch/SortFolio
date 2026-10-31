@@ -18,7 +18,8 @@
   </nav>
   <div class="user">
     <span class="mode-pill" id="modePill">Admin</span>
-    <button class="avatar" id="logoutBtn" title="Log out">AD</button>
+    <button class="avatar" id="avatarBtn" type="button" title="View profile" aria-label="View profile">AD</button>
+    <button class="btn-ghost logout-btn" id="logoutBtn" type="button">Log out</button>
   </div>
 </header>
 
@@ -155,6 +156,17 @@
         <div class="tabpane" id="tab-compare">
           <div class="compare-panel">
             <p class="muted small">Paste the original and changed code below. Sortfolio will show an aligned diff; pasted code is compared locally and is not uploaded.</p>
+            <p class="muted small">Paste code in Before, choose a language, then generate a corrected copy in After. The original stays unchanged. Suggestions cover a few common patterns only; they are not a full code review.</p>
+            <div class="compare-autocorrect-toolbar">
+              <label class="fix-language">Language
+                <select class="select in" id="compareLanguage" aria-label="Code language">
+                  <option value="javascript">JavaScript</option>
+                  <option value="typescript">TypeScript</option>
+                  <option value="other">Other language</option>
+                </select>
+              </label>
+              <button class="btn-gold" id="compareAutoCorrectBtn" type="button">Auto-correct → After</button>
+            </div>
             <div class="compare-editor-grid">
               <label class="compare-field">Before
                 <textarea id="compareOriginalInput" class="compare-textarea" spellcheck="false" placeholder="Paste original code here"></textarea>
@@ -174,6 +186,16 @@
               <h4>Change summary</h4>
               <p class="muted small" id="compareSummary">Paste both versions and render the diff to see a summary.</p>
             </div>
+            <section class="fix-suggestions" id="compareSuggestions" aria-labelledby="compareSuggestionsTitle" hidden>
+              <div class="fix-suggestions-head">
+                <div>
+                  <h4 id="compareSuggestionsTitle">Possible fixes</h4>
+                  <p class="muted small">Review possible fixes and preview each one before applying it.</p>
+                </div>
+              </div>
+              <ul class="fix-suggestion-list" id="compareSuggestionList"></ul>
+              <p class="muted small" id="compareSuggestionsEmpty" hidden></p>
+            </section>
           </div>
         </div>
         <div class="tabpane" id="tab-summary">
@@ -402,7 +424,6 @@
     <button type="submit" class="chat-send-btn" id="chatSendBtn">Send</button>
   </form>
 </div>
-
 <!-- Add Repository Modal -->
 <div class="portfolio-modal-backdrop" id="addRepoModal" hidden>
   <div class="portfolio-modal">
@@ -425,6 +446,57 @@
   </div>
 </div>
 
+<div class="portfolio-modal-backdrop" id="profileModal" hidden>
+  <section class="portfolio-modal profile-modal" role="dialog" aria-modal="true" aria-labelledby="profileTitle">
+    <div class="portfolio-modal-head">
+      <div>
+        <p class="profile-eyebrow">ACCOUNT</p>
+        <h3 id="profileTitle">Your profile</h3>
+      </div>
+      <button type="button" class="btn-ghost sm" id="closeProfileModalBtn" aria-label="Close profile">✕</button>
+    </div>
+    <div class="profile-banner">
+      <div class="profile-avatar" id="profileAvatar">U</div>
+      <div class="profile-identity">
+        <h4 id="profileDisplayName">Your name</h4>
+        <p id="profileDisplayEmail">Your email</p>
+      </div>
+      <span class="profile-badge" id="profileBadge">Local account</span>
+    </div>
+    <form id="profileForm" novalidate>
+      <div class="profile-section-title">
+        <div><h4>Personal details</h4><p class="muted small">Keep your account information up to date.</p></div>
+        <span class="profile-edit-hint">✎ Editable</span>
+      </div>
+      <div class="profile-fields">
+        <label>Full name<input class="in" id="profileName" type="text" maxlength="80" autocomplete="name" required></label>
+        <label>Email<input class="in" id="profileEmail" type="email" maxlength="254" autocomplete="email" required></label>
+      </div>
+      <div class="profile-meta">
+        <div class="profile-meta-card"><span>Account type</span><strong id="profileMode"></strong></div>
+        <div class="profile-meta-card"><span>Member since</span><strong id="profileCreated"></strong></div>
+      </div>
+      <p class="profile-readonly" id="profileReadOnly" hidden>This session is read-only. Sign in with a registered account to edit profile details.</p>
+      <p class="profile-demo-note" id="profileDemoNote" hidden>Demo profile edits are saved in this browser only.</p>
+      <fieldset class="profile-password" id="profilePassword">
+        <legend>Security <span class="muted small">(optional)</span></legend>
+        <p class="muted small profile-password-help">Change password for your account.</p>
+        <div class="profile-fields">
+          <label>Current password<input class="in" id="profileCurrentPassword" type="password" autocomplete="current-password"></label>
+          <label>New password<input class="in" id="profileNewPassword" type="password" minlength="8" autocomplete="new-password"></label>
+          <label class="wide">Confirm new password<input class="in" id="profileConfirmPassword" type="password" autocomplete="new-password"></label>
+        </div>
+      </fieldset>
+      <p class="form-error" id="profileError" role="alert" hidden></p>
+      <p class="saved profile-saved" id="profileSaved" role="status"></p>
+      <div class="profile-actions">
+        <button type="button" class="btn-ghost auto" id="cancelProfileBtn">Cancel</button>
+        <button type="submit" class="btn-gold" id="saveProfileBtn">Save changes</button>
+      </div>
+    </form>
+  </section>
+</div>
+
 <!-- Templates (cloned by js/app.js) -->
 <template id="tpl-recent"><li class="recent-item"><span class="gh-dot">●</span><div class="grow"><b data-f="title"></b><small data-f="sub"></small></div><div class="r-right"><small data-f="time"></small><span class="chip" data-f="status"></span></div></li></template>
 <template id="tpl-claim"><li class="claim"><span class="num" data-f="num"></span><div class="grow"><b data-f="text"></b><small data-f="where"></small></div><span class="chip" data-f="status"></span><button class="btn-outline sm" data-f="view" type="button">View Details →</button></li></template>
@@ -437,6 +509,7 @@
 <script src="js/api.js"></script>
 <script src="js/code-diff.js"></script>
 <script src="js/feedback.js"></script>
+<script src="js/users.js"></script>
 <script src="js/app.js"></script>
 <script src="js/pages.js"></script>
 </body>

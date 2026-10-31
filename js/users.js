@@ -17,5 +17,12 @@ window.SFUsers = (function () {
     var list = all(); list.push(user);
     try { localStorage.setItem(KEY, JSON.stringify(list)); return true; } catch (e) { return false; }
   }
-  return { hash: hash, find: find, add: add };
+  function update(email, changes) {
+    var list = all();
+    var index = list.findIndex(function (user) { return user.email === email; });
+    if (index < 0) return false;
+    list[index] = Object.assign({}, list[index], changes);
+    try { localStorage.setItem(KEY, JSON.stringify(list)); return true; } catch (e) { return false; }
+  }
+  return { hash: hash, find: find, add: add, update: update };
 })();

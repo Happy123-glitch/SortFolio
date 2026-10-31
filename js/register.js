@@ -30,6 +30,7 @@
 
     sessionStorage.setItem("sf_mode", "user");
     sessionStorage.setItem("sf_name", name);
+    sessionStorage.setItem("sf_email", email);
     document.body.classList.add("leaving");
     setTimeout(function () { location.href = "index.html"; }, 350);
   });

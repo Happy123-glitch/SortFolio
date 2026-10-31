@@ -11,6 +11,7 @@
   <div class="brand"><span class="logo">S</span><span>Sortfolio</span></div>
   <nav class="nav" id="nav">
     <button class="nav-btn active" data-view="home">🏠 Home</button>
+    <button class="nav-btn" data-view="repos">⑂ Repos &amp; PRs</button>
     <button class="nav-btn" data-view="history">🕘 History</button>
     <button class="nav-btn" data-view="settings">⚙️ Settings</button>
     <button class="nav-btn" data-view="about">ⓘ About</button>
@@ -148,7 +149,6 @@
           <button class="tab" data-tab="repro">⚗ Reproduction Results</button>
           <button class="tab" data-tab="compare">⇄ Compare Code</button>
           <button class="tab" data-tab="summary">📄 Summary</button>
-          <button class="tab" data-tab="feedback">💬 Feedback &amp; Improvements</button>
         </div>
         <div class="tabpane active" id="tab-claims"><ul class="claim-list" id="claimList"></ul></div>
         <div class="tabpane" id="tab-graph"><ul class="graph-list" id="graphList"></ul></div>
@@ -203,82 +203,6 @@
           <p class="note">Sortfolio is advisory. A maintainer makes the final decision; nothing is posted to GitHub automatically.</p>
           <button class="btn-ghost" id="exportBtn" type="button">Download JSON report</button>
         </div>
-        <div class="tabpane" id="tab-feedback">
-          <div class="feedback-panel">
-            <div class="feedback-head">
-              <div>
-                <h4 style="font-size:16px; color:var(--gold); margin-bottom:4px;">💬 Suggest Improvements &amp; Report Triage Anomalies</h4>
-                <p class="muted small">Tell us what could be improved in the deterministic AST engine, evidence extraction, line anchors, or AI synthesis.</p>
-              </div>
-              <div class="feedback-target-chip" id="feedbackTargetChip">
-                <span>Target:</span> <strong id="feedbackTargetName">General Platform</strong>
-              </div>
-            </div>
-
-            <form class="feedback-form" id="feedbackForm" novalidate>
-              <div class="feedback-grid">
-                <div class="feedback-field">
-                  <label for="feedbackCategory">Area to improve</label>
-                  <select class="in select" id="feedbackCategory" required>
-                    <option value="evidence">🔍 Evidence Accuracy (AST parser precision &amp; line numbers)</option>
-                    <option value="verdict">⚖️ Triage Verdict (Supported / Contradicted / Unverified)</option>
-                    <option value="model">🤖 AI Model Output (Qwen 2.5 summary clarity &amp; hallucination check)</option>
-                    <option value="extraction">📋 Claim Extraction (Missed technical claims in issue/PR)</option>
-                    <option value="diff">⇄ Git Diff &amp; Code Comparison</option>
-                    <option value="ui">🎨 UI &amp; Workflow Usability</option>
-                    <option value="feature">💡 New Feature Suggestion</option>
-                  </select>
-                </div>
-
-                <div class="feedback-field">
-                  <label>Triage Quality Rating</label>
-                  <div class="star-rating" id="starRating">
-                    <button type="button" class="star-btn active" data-val="1" title="1 star">★</button>
-                    <button type="button" class="star-btn active" data-val="2" title="2 stars">★</button>
-                    <button type="button" class="star-btn active" data-val="3" title="3 stars">★</button>
-                    <button type="button" class="star-btn active" data-val="4" title="4 stars">★</button>
-                    <button type="button" class="star-btn active" data-val="5" title="5 stars">★</button>
-                    <span class="star-val muted small" id="starValueText">5 / 5 - Highly Accurate</span>
-                  </div>
-                  <input type="hidden" id="feedbackRating" value="5">
-                </div>
-
-                <div class="feedback-field wide">
-                  <label for="feedbackText">What can be improved? <span class="req" style="color:var(--gold);">*</span></label>
-                  <textarea class="in feedback-textarea" id="feedbackText" rows="3" required placeholder="Describe what can be improved (e.g. 'The Python parser did not detect multiline decorator arguments in this file', or 'Add side-by-side view toggle to Compare tab')"></textarea>
-                  <div class="feedback-char-count muted small" id="feedbackCharCount">0 / 500 characters</div>
-                </div>
-
-                <div class="feedback-field">
-                  <label for="feedbackSuggestion">Suggested Fix or Line Anchor (Optional)</label>
-                  <input class="in" type="text" id="feedbackSuggestion" placeholder="e.g. Lines 24–30 or https://github.com/..." maxlength="120">
-                </div>
-
-                <div class="feedback-field">
-                  <label for="feedbackAuthor">Your GitHub Handle or Name (Optional)</label>
-                  <input class="in" type="text" id="feedbackAuthor" placeholder="@contributor" maxlength="50">
-                </div>
-              </div>
-
-              <div class="feedback-footer">
-                <button type="submit" class="btn-gold" id="submitFeedbackBtn">Submit Improvement</button>
-                <span class="saved" id="feedbackSaved" role="status" aria-live="polite"></span>
-              </div>
-            </form>
-
-            <div class="feedback-backlog">
-              <div class="feedback-backlog-header">
-                <h4>Recent Improvements &amp; Community Feedback</h4>
-                <div class="feedback-filter-group">
-                  <span class="muted small" id="feedbackBacklogCount">3 items</span>
-                </div>
-              </div>
-              <div class="feedback-cards" id="feedbackCardsList">
-                <!-- Dynamically populated -->
-              </div>
-            </div>
-          </div>
-        </div>
       </div>
     </section>
 
@@ -302,6 +226,69 @@
   <div class="bottom">
     <div class="panel next"><span class="bulb">💡</span><div class="grow"><h3>What's Next?</h3><p class="muted">Add more context or check related issues for deeper insights.</p></div><button class="btn-outline" id="relatedBtn" type="button">Check Related Issues →</button></div>
     <div class="panel help"><span class="bulb">💬</span><div class="grow"><h4>Need Help or Have Ideas?</h4><button class="link" data-goto="about">Read how it works →</button></div><button class="btn-outline sm" type="button" id="openFeedbackQuickBtn" style="margin-left:auto;">Give Feedback →</button><span class="bot">🤖</span></div>
+  </div>
+</section>
+
+<!-- REPOSITORIES & PULL REQUESTS HUB -->
+<section class="view" id="view-repos">
+  <div class="page-panel" style="max-width: 1050px; margin: 24px auto;">
+    <div class="repos-view-head">
+      <div>
+        <h2 style="color:var(--gold); font-size:22px; display:flex; align-items:center; gap:8px;">
+          <span>⑂</span> Tracked Repositories &amp; Pull Requests Explorer
+        </h2>
+        <p class="muted small" style="margin-top:4px;">
+          View all repositories in your portfolio with Pull Request numbers, triage completion status, and AI-generated code diagnostics with actionable error solutions.
+        </p>
+      </div>
+      <div style="display:flex; gap:10px; align-items:center;">
+        <button type="button" class="btn-gold sm" onclick="if(window.SF_openAddRepoModal) window.SF_openAddRepoModal();">➕ Add Repo</button>
+      </div>
+    </div>
+
+    <!-- Shelf of All Repositories -->
+    <div class="repos-portfolio-shelf" id="reposPortfolioShelf">
+      <!-- Dynamically populated with repo cards showing PR count, completion badge, status -->
+    </div>
+
+    <!-- Active Repository Pull Requests Inspector -->
+    <div class="panel repos-pr-inspector" id="reposPRInspector">
+      <div class="inspector-head">
+        <div>
+          <h3 id="inspectorRepoTitle">⑂ Pull Requests</h3>
+          <p class="muted small" id="inspectorRepoSubtitle">Select any pull request to inspect AI details, detected errors, and executable code fixes.</p>
+        </div>
+        <div class="inspector-actions">
+          <button type="button" class="btn-outline sm" id="inspectorRefreshBtn">🔄 Refresh</button>
+        </div>
+      </div>
+
+      <div class="repo-explorer-controls">
+        <div class="repo-explorer-filter" id="inspectorFilter">
+          <button type="button" class="repo-filter-btn active" data-filter="all">All (<span id="insCountAll">0</span>)</button>
+          <button type="button" class="repo-filter-btn" data-filter="open">Open (<span id="insCountOpen">0</span>)</button>
+          <button type="button" class="repo-filter-btn" data-filter="closed">Closed / Merged (<span id="insCountClosed">0</span>)</button>
+        </div>
+        <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted);">
+          Sort:
+          <select class="repo-sort-select" id="inspectorSortSelect" aria-label="Sort Pull Requests">
+            <option value="number-desc">Number: Newest first (↓)</option>
+            <option value="number-asc">Number: Oldest first (↑)</option>
+            <option value="date-desc">Updated: Most recent</option>
+            <option value="state-open">State: Open first</option>
+            <option value="title-asc">Title: A–Z</option>
+          </select>
+        </label>
+        <input type="search" class="repo-search-input" id="inspectorSearchInput" placeholder="Filter pull requests by title, author, #…" aria-label="Filter pull requests">
+      </div>
+
+      <div id="inspectorLoading" class="loading" style="min-height:120px;" hidden>
+        <div class="spinner" style="width:32px;height:32px;"></div>
+        <p class="muted small">Fetching pull requests from GitHub repository…</p>
+      </div>
+
+      <ul class="repo-items-list" id="inspectorPRList"></ul>
+    </div>
   </div>
 </section>
 
@@ -389,6 +376,122 @@
       <div class="actions"><button class="btn-gold" type="submit">Save details</button><button class="btn-ghost auto" type="button" id="abCopy">Copy HACKATHON.md text</button></div>
       <p class="saved" id="aboutSaved" role="status"></p>
     </form>
+  </div>
+</section>
+
+<!-- FEEDBACK -->
+<section class="view" id="view-feedback">
+  <div class="page-grid">
+    <div class="panel">
+      <div class="feedback-head">
+        <div>
+          <h3 style="color:var(--gold); margin-bottom:6px;">💬 Suggest Improvements &amp; Report Anomalies</h3>
+          <p class="muted small">Help improve Sortfolio's deterministic static analysis engine, evidence accuracy, and open-weight model synthesis.</p>
+        </div>
+        <div class="feedback-target-chip" id="feedbackTargetChip">
+          <span>Target:</span> <strong id="feedbackTargetName">General Platform</strong>
+        </div>
+      </div>
+
+      <form class="feedback-form" id="feedbackForm" novalidate style="margin-top:16px;">
+        <div class="feedback-grid">
+          <div class="feedback-field">
+            <label for="feedbackCategory">Area to improve</label>
+            <select class="in select" id="feedbackCategory" required>
+              <option value="evidence">🔍 Evidence Accuracy (AST parser precision &amp; line numbers)</option>
+              <option value="verdict">⚖️ Triage Verdict (Supported / Contradicted / Unverified)</option>
+              <option value="model">🤖 AI Model Output (Qwen 2.5 summary clarity &amp; hallucination check)</option>
+              <option value="extraction">📋 Claim Extraction (Missed technical claims in issue/PR)</option>
+              <option value="diff">⇄ Git Diff &amp; Code Comparison</option>
+              <option value="ui">🎨 UI &amp; Workflow Usability</option>
+              <option value="feature">💡 New Feature Suggestion</option>
+            </select>
+          </div>
+
+          <div class="feedback-field">
+            <label>Triage Quality Rating</label>
+            <div class="star-rating" id="starRating">
+              <button type="button" class="star-btn active" data-val="1" title="1 star">★</button>
+              <button type="button" class="star-btn active" data-val="2" title="2 stars">★</button>
+              <button type="button" class="star-btn active" data-val="3" title="3 stars">★</button>
+              <button type="button" class="star-btn active" data-val="4" title="4 stars">★</button>
+              <button type="button" class="star-btn active" data-val="5" title="5 stars">★</button>
+              <span class="star-val muted small" id="starValueText">5 / 5 - Highly Accurate</span>
+            </div>
+            <input type="hidden" id="feedbackRating" value="5">
+          </div>
+
+          <div class="feedback-field wide">
+            <label for="feedbackText">What can be improved? <span class="req" style="color:var(--gold);">*</span></label>
+            <textarea class="in feedback-textarea" id="feedbackText" rows="4" required placeholder="Describe what can be improved (e.g. 'The Python parser did not detect multiline decorator arguments in this file', or 'Add side-by-side view toggle to Compare tab')"></textarea>
+            <div class="feedback-char-count muted small" id="feedbackCharCount">0 / 500 characters</div>
+          </div>
+
+          <div class="feedback-field">
+            <label for="feedbackSuggestion">Suggested Fix or Line Anchor (Optional)</label>
+            <input class="in" type="text" id="feedbackSuggestion" placeholder="e.g. Lines 24–30 or https://github.com/..." maxlength="120">
+          </div>
+
+          <div class="feedback-field">
+            <label for="feedbackAuthor">Your GitHub Handle or Name (Optional)</label>
+            <input class="in" type="text" id="feedbackAuthor" placeholder="@contributor" maxlength="50">
+          </div>
+        </div>
+
+        <div class="feedback-footer">
+          <button type="submit" class="btn-gold" id="submitFeedbackBtn">Submit Improvement</button>
+          <span class="saved" id="feedbackSaved" role="status" aria-live="polite"></span>
+        </div>
+      </form>
+
+      <div class="feedback-backlog" style="margin-top:28px;">
+        <div class="feedback-backlog-header">
+          <h4>Recent Improvements &amp; Community Feedback</h4>
+          <div class="feedback-filter-group">
+            <span class="muted small" id="feedbackBacklogCount">3 items</span>
+          </div>
+        </div>
+        <div class="feedback-cards" id="feedbackCardsList">
+          <!-- Dynamically populated -->
+        </div>
+      </div>
+    </div>
+
+    <aside class="side">
+      <div class="panel">
+        <h3>💡 How Feedback Is Used</h3>
+        <p class="muted small" style="margin-bottom:12px;">Sortfolio uses feedback to benchmark open-weight model extraction, expand AST grammar support, and refine deterministic line-matching algorithms.</p>
+        <dl class="kv small">
+          <dt>Grounding</dt>
+          <dd>Verifications are backed by verified source lines.</dd>
+          <dt>Open-Weight</dt>
+          <dd>Feedback tests Qwen 2.5 7B extraction accuracy.</dd>
+          <dt>Advisory</dt>
+          <dd>Human maintainers retain complete decision authority.</dd>
+        </dl>
+      </div>
+
+      <div class="panel">
+        <h3>📊 Current Benchmark Metrics</h3>
+        <div class="stats" style="grid-template-columns: repeat(2, 1fr); margin-top:8px;">
+          <div class="stat"><b style="font-size:22px;">100%</b><small>Coverage</small></div>
+          <div class="stat"><b style="font-size:22px;">100%</b><small>Precision</small></div>
+          <div class="stat"><b style="font-size:22px;">0%</b><small>False Positives</small></div>
+          <div class="stat"><b style="font-size:22px;">100%</b><small>Deterministic</small></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h3>🚀 Problem 02 Roadmap</h3>
+        <ul class="steps" style="font-size:13px; margin-top:8px;">
+          <li><span style="color:var(--ok);">✔</span> Multi-Repo Portfolio Hub</li>
+          <li><span style="color:var(--ok);">✔</span> Aligned Code Diff &amp; Patch Export</li>
+          <li><span style="color:var(--ok);">✔</span> AI Triage Assistant (Qwen 2.5)</li>
+          <li><span style="color:var(--gold);">⏳</span> Multi-language AST: TypeScript &amp; Go</li>
+          <li><span style="color:var(--gold);">⏳</span> Automated PR review comments draft</li>
+        </ul>
+      </div>
+    </aside>
   </div>
 </section>
 </main>
@@ -496,6 +599,55 @@
     </form>
   </section>
 </div>
+<!-- AI Diagnostic & Error Solution Modal -->
+<div class="portfolio-modal-backdrop" id="aiDiagnosticModal" hidden>
+  <div class="portfolio-modal diagnostic-modal">
+    <div class="portfolio-modal-head">
+      <div style="display:flex; align-items:center; gap:8px;">
+        <span style="font-size:20px;">🤖</span>
+        <div>
+          <h3 id="diagModalTitle" style="color:var(--gold); margin:0;">AI PR Diagnostic &amp; Solution</h3>
+          <p class="muted small" id="diagModalSubtitle" style="margin:2px 0 0;"></p>
+        </div>
+      </div>
+      <button type="button" class="btn-ghost sm" id="closeDiagModalBtn">✕</button>
+    </div>
+
+    <div class="diagnostic-modal-body" id="diagModalBody">
+      <!-- Loading state -->
+      <div id="diagModalLoading" class="loading" style="min-height:150px;">
+        <div class="spinner"></div>
+        <p class="muted small">Analyzing PR changes, extracting claims, and evaluating errors…</p>
+      </div>
+
+      <!-- Loaded content -->
+      <div id="diagModalContent" hidden>
+        <!-- AI Summary Card -->
+        <div class="diag-section">
+          <h4>📄 What Is There (AI PR Summary)</h4>
+          <p id="diagSummaryText" class="diag-text"></p>
+          <div class="diag-files-tags" id="diagFilesTags"></div>
+        </div>
+
+        <!-- Verification & Error Status -->
+        <div class="diag-section">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+            <h4>⚖️ Verification &amp; Error Detection</h4>
+            <span class="chip" id="diagStatusBadge">Verified</span>
+          </div>
+          <div id="diagIssuesContainer"></div>
+        </div>
+
+        <!-- Action Footer -->
+        <div class="diag-footer">
+          <button type="button" class="btn-gold sm" id="diagRunTriageBtn">⚡ Run Full AST Triage</button>
+          <button type="button" class="btn-outline sm" id="diagCompareBtn">⇄ Open in Compare View</button>
+          <button type="button" class="btn-ghost sm" id="diagCloseBtn">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 
 <!-- Templates (cloned by js/app.js) -->
 <template id="tpl-recent"><li class="recent-item"><span class="gh-dot">●</span><div class="grow"><b data-f="title"></b><small data-f="sub"></small></div><div class="r-right"><small data-f="time"></small><span class="chip" data-f="status"></span></div></li></template>
@@ -510,6 +662,7 @@
 <script src="js/code-diff.js"></script>
 <script src="js/feedback.js"></script>
 <script src="js/users.js"></script>
+<script src="js/ai-diagnostic.js"></script>
 <script src="js/app.js"></script>
 <script src="js/pages.js"></script>
 </body>

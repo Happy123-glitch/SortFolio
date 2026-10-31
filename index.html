@@ -47,7 +47,7 @@
       </div>
       <div class="portfolio-actions">
         <span class="portfolio-counter" id="portfolioCounter">0 Repositories</span>
-        <button type="button" class="btn-gold sm" id="openAddRepoModalBtn">➕ Add Repo</button>
+        <button type="button" class="btn-gold sm" id="openAddRepoModalBtn" onclick="if(window.SF_openAddRepoModal) window.SF_openAddRepoModal();">➕ Add Repo</button>
       </div>
     </div>
     <div class="portfolio-grid" id="portfolioGrid">
@@ -62,11 +62,14 @@
         <button type="button" class="seg-btn active" data-type="issue">❗ Issue</button>
         <button type="button" class="seg-btn" data-type="pull">⑂ Pull Request</button>
       </div>
-      <label class="field grow"><span>🔗</span><input id="repoUrl" type="text" placeholder="https://github.com/octocat/hello-world" aria-label="Repository URL"></label>
+      <label class="field grow">
+        <span>🔗</span>
+        <input id="repoUrl" type="text" placeholder="https://github.com/octocat/hello-world" aria-label="Repository URL">
+        <button class="btn-pin-icon" type="button" id="pinCurrentRepoBtn" title="Pin / Add current repository to your Portfolio">⭐</button>
+      </label>
       <label class="field num"><span>#</span><input id="itemNum" type="number" min="1" placeholder="42" aria-label="Issue or PR number"></label>
       <button class="btn-gold" type="submit" id="analyzeBtn">▶ Analyze</button>
       <button class="btn-outline" type="button" id="browseRepoBtn" title="Fetch and sort all Pull Requests or Issues in this repository">📋 Browse &amp; Sort</button>
-      <button class="btn-ghost" type="button" id="pinCurrentRepoBtn" title="Pin / Add current repository to your Portfolio">⭐ Pin</button>
     </div>
     <div class="presets-row" style="margin-top: 12px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
       <small style="color: var(--muted, #8b949e); font-weight: 500;">Preset Demo Cases:</small>
@@ -141,11 +144,36 @@
           <button class="tab active" data-tab="claims">☰ Claim Breakdown</button>
           <button class="tab" data-tab="graph">⛓ Evidence Graph</button>
           <button class="tab" data-tab="repro">⚗ Reproduction Results</button>
+          <button class="tab" data-tab="compare">⇄ Compare Code</button>
           <button class="tab" data-tab="summary">📄 Summary</button>
         </div>
         <div class="tabpane active" id="tab-claims"><ul class="claim-list" id="claimList"></ul></div>
         <div class="tabpane" id="tab-graph"><ul class="graph-list" id="graphList"></ul></div>
         <div class="tabpane" id="tab-repro"><p class="repro-text" id="reproText"></p></div>
+        <div class="tabpane" id="tab-compare">
+          <div class="compare-panel">
+            <p class="muted small">Paste the original and changed code below. Sortfolio will show an aligned diff; pasted code is compared locally and is not uploaded.</p>
+            <div class="compare-editor-grid">
+              <label class="compare-field">Before
+                <textarea id="compareOriginalInput" class="compare-textarea" spellcheck="false" placeholder="Paste original code here"></textarea>
+              </label>
+              <label class="compare-field">After
+                <textarea id="compareUpdatedInput" class="compare-textarea" spellcheck="false" placeholder="Paste changed code here"></textarea>
+              </label>
+            </div>
+            <div class="compare-toolbar">
+              <button class="btn-gold" id="compareRenderBtn" type="button">Render diff</button>
+              <button class="btn-outline" id="compareCopyBtn" type="button" disabled>Copy patch</button>
+              <button class="btn-outline" id="compareDownloadBtn" type="button" disabled>Download patch</button>
+              <span class="compare-feedback muted small" id="compareFeedback" role="status" aria-live="polite"></span>
+            </div>
+            <div class="diff-wrap" id="compareDiff" aria-label="Side-by-side code diff"></div>
+            <div class="compare-summary">
+              <h4>Change summary</h4>
+              <p class="muted small" id="compareSummary">Paste both versions and render the diff to see a summary.</p>
+            </div>
+          </div>
+        </div>
         <div class="tabpane" id="tab-summary">
           <div class="stats" id="statsRow"></div>
           <p class="note">Sortfolio is advisory. A maintainer makes the final decision; nothing is posted to GitHub automatically.</p>
@@ -295,6 +323,8 @@
     <input type="text" id="chatInput" placeholder="Ask about this issue or evidence..." autocomplete="off">
     <button type="submit" class="chat-send-btn" id="chatSendBtn">Send</button>
   </form>
+</div>
+
 <!-- Add Repository Modal -->
 <div class="portfolio-modal-backdrop" id="addRepoModal" hidden>
   <div class="portfolio-modal">
@@ -327,6 +357,7 @@
 
 <script src="js/data.js"></script>
 <script src="js/api.js"></script>
+<script src="js/code-diff.js"></script>
 <script src="js/app.js"></script>
 <script src="js/pages.js"></script>
 </body>

@@ -725,12 +725,16 @@ body.calm *{animation:none!important;transition:none!important}
 .portfolio-modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.7);
+  background: rgba(0, 0, 0, 0.75);
   backdrop-filter: blur(5px);
-  display: grid;
-  place-items: center;
-  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 99999;
   animation: viewIn 0.2s var(--ease) both;
+}
+.portfolio-modal-backdrop[hidden] {
+  display: none !important;
 }
 .portfolio-modal {
   background: #15100a;
@@ -749,5 +753,20 @@ body.calm *{animation:none!important;transition:none!important}
 }
 .portfolio-modal-head h3 {
   font-size: 17px;
+  color: var(--gold);
+}
+.btn-pin-icon {
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: 16px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+  transition: transform 0.2s, color 0.2s;
+  flex: none;
+}
+.btn-pin-icon:hover {
+  transform: scale(1.2);
   color: var(--gold);
 }

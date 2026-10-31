@@ -47,7 +47,7 @@
       </div>
       <div class="portfolio-actions">
         <span class="portfolio-counter" id="portfolioCounter">0 Repositories</span>
-        <button type="button" class="btn-gold sm" id="openAddRepoModalBtn">➕ Add Repo</button>
+        <button type="button" class="btn-gold sm" id="openAddRepoModalBtn" onclick="if(window.SF_openAddRepoModal) window.SF_openAddRepoModal();">➕ Add Repo</button>
       </div>
     </div>
     <div class="portfolio-grid" id="portfolioGrid">
@@ -62,11 +62,14 @@
         <button type="button" class="seg-btn active" data-type="issue">❗ Issue</button>
         <button type="button" class="seg-btn" data-type="pull">⑂ Pull Request</button>
       </div>
-      <label class="field grow"><span>🔗</span><input id="repoUrl" type="text" placeholder="https://github.com/octocat/hello-world" aria-label="Repository URL"></label>
+      <label class="field grow">
+        <span>🔗</span>
+        <input id="repoUrl" type="text" placeholder="https://github.com/octocat/hello-world" aria-label="Repository URL">
+        <button class="btn-pin-icon" type="button" id="pinCurrentRepoBtn" title="Pin / Add current repository to your Portfolio">⭐</button>
+      </label>
       <label class="field num"><span>#</span><input id="itemNum" type="number" min="1" placeholder="42" aria-label="Issue or PR number"></label>
       <button class="btn-gold" type="submit" id="analyzeBtn">▶ Analyze</button>
       <button class="btn-outline" type="button" id="browseRepoBtn" title="Fetch and sort all Pull Requests or Issues in this repository">📋 Browse &amp; Sort</button>
-      <button class="btn-ghost" type="button" id="pinCurrentRepoBtn" title="Pin / Add current repository to your Portfolio">⭐ Pin</button>
     </div>
     <div class="presets-row" style="margin-top: 12px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
       <small style="color: var(--muted, #8b949e); font-weight: 500;">Preset Demo Cases:</small>
@@ -320,6 +323,8 @@
     <input type="text" id="chatInput" placeholder="Ask about this issue or evidence..." autocomplete="off">
     <button type="submit" class="chat-send-btn" id="chatSendBtn">Send</button>
   </form>
+</div>
+
 <!-- Add Repository Modal -->
 <div class="portfolio-modal-backdrop" id="addRepoModal" hidden>
   <div class="portfolio-modal">

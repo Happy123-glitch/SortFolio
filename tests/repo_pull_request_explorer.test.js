@@ -122,19 +122,57 @@ test('Repository Pull Request & Issue Explorer with Sorting', async (t) => {
   });
 
   await t.test('handleAnalyzePR: verifies PR #1 for reachable-vulnerability', async () => {
-    const req = new Request('http://localhost/functions/v1/analyze-pr', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        repo: 'me-agrim-rehan/reachable-vulnerability',
-        prNumber: 1,
-      }),
-    });
-    const res = await handleAnalyzePR(req);
-    assert.equal(res.status, 200);
-    const data = await res.json();
-    assert.equal(data.run.repo_full_name, 'me-agrim-rehan/reachable-vulnerability');
-    assert.equal(data.run.item_number, 1);
-    assert.ok(Array.isArray(data.claims));
+    const originalFetch = globalThis.fetch;
+    try {
+      globalThis.fetch = async (url, opts) => {
+        const u = url.toString();
+        if (u.includes('reachable-vulnerability/pulls/1')) {
+          if (opts?.headers?.Accept?.includes('diff')) {
+            return {
+              ok: true,
+              status: 200,
+              text: async () => `diff --git a/README.md b/README.md
+index 1111111..2222222 100644
+--- a/README.md
++++ b/README.md
+@@ -1,3 +1,5 @@
+ # Reachable Vulnerability
++Initial project setup with vulnerability scanner integration.
+`,
+            };
+          }
+          return {
+            ok: true,
+            status: 200,
+            json: async () => ({
+              title: 'chore: establish project foundation',
+              body: 'Initial project setup with vulnerability scanner integration.',
+              user: { login: 'me-agrim-rehan' },
+              html_url: 'https://github.com/me-agrim-rehan/reachable-vulnerability/pull/1',
+              head: { sha: 'abcdef123456', ref: 'main' },
+              base: { ref: 'main' },
+            }),
+          };
+        }
+        return originalFetch(url, opts);
+      };
+
+      const req = new Request('http://localhost/functions/v1/analyze-pr', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          repo: 'me-agrim-rehan/reachable-vulnerability',
+          prNumber: 1,
+        }),
+      });
+      const res = await handleAnalyzePR(req);
+      assert.equal(res.status, 200);
+      const data = await res.json();
+      assert.equal(data.run.repo_full_name, 'me-agrim-rehan/reachable-vulnerability');
+      assert.equal(data.run.item_number, 1);
+      assert.ok(Array.isArray(data.claims));
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
   });
 });

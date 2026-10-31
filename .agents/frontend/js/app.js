@@ -129,6 +129,108 @@
     show($("emptyState"), false); show($("loadingState"), false); show($("resultBody"), true);
   }
 
+  /* ---------- local code comparison ---------- */
+  var currentPatch = "";
+
+  function clearCompareOutput(message) {
+    fill($("compareDiff"), []);
+    $("compareSummary").textContent = message;
+    $("compareCopyBtn").disabled = true;
+    $("compareDownloadBtn").disabled = true;
+    currentPatch = "";
+  }
+
+  function renderCompareDiff() {
+    var beforeText = $("compareOriginalInput").value;
+    var afterText = $("compareUpdatedInput").value;
+    if (!beforeText && !afterText) {
+      clearCompareOutput("Paste code in either or both fields, then render the diff.");
+      $("compareFeedback").textContent = "";
+      return;
+    }
+
+    var diff = window.SortfolioDiff.buildDiff(beforeText, afterText);
+    fill($("compareDiff"), diff.rows.map(function (line) {
+      var row = document.createElement("div");
+      row.className = "diff-line diff-" + line.type;
+
+      function side(name, number, marker, content) {
+        var cell = document.createElement("div");
+        cell.className = "diff-side diff-" + name;
+        var lineNumber = document.createElement("span");
+        lineNumber.className = "diff-num";
+        lineNumber.textContent = number === null ? "" : String(number);
+        var sign = document.createElement("span");
+        sign.className = "diff-marker";
+        sign.textContent = marker;
+        var text = document.createElement("span");
+        text.className = "diff-text";
+        text.textContent = content;
+        cell.appendChild(lineNumber);
+        cell.appendChild(sign);
+        cell.appendChild(text);
+        return cell;
+      }
+
+      row.appendChild(side(
+        "before",
+        line.beforeNo,
+        line.type === "removed" ? "-" : line.type === "unchanged" ? " " : "",
+        line.type === "added" ? "" : line.text
+      ));
+      row.appendChild(side(
+        "after",
+        line.afterNo,
+        line.type === "added" ? "+" : line.type === "unchanged" ? " " : "",
+        line.type === "removed" ? "" : line.text
+      ));
+      return row;
+    }));
+
+    var summary = diff.added + " addition" + (diff.added === 1 ? "" : "s") +
+      ", " + diff.removed + " removal" + (diff.removed === 1 ? "" : "s") +
+      ", " + diff.unchanged + " unchanged line" + (diff.unchanged === 1 ? "" : "s") + ".";
+    if (diff.simplified) summary += " Large input: showing a full replacement to keep comparison responsive.";
+    $("compareSummary").textContent = summary;
+    currentPatch = window.SortfolioDiff.createPatch(beforeText, afterText);
+    $("compareCopyBtn").disabled = false;
+    $("compareDownloadBtn").disabled = false;
+    $("compareFeedback").textContent = "";
+  }
+
+  function invalidateCompareOutput() {
+    clearCompareOutput("Inputs changed. Render the diff to refresh the comparison.");
+    $("compareFeedback").textContent = "";
+  }
+
+  $("compareRenderBtn").addEventListener("click", renderCompareDiff);
+  $("compareOriginalInput").addEventListener("input", invalidateCompareOutput);
+  $("compareUpdatedInput").addEventListener("input", invalidateCompareOutput);
+  $("compareCopyBtn").addEventListener("click", async function () {
+    if (!currentPatch) return;
+    if (!navigator.clipboard || !navigator.clipboard.writeText) {
+      $("compareFeedback").textContent = "Clipboard access is unavailable here. Download the patch instead.";
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(currentPatch);
+      $("compareFeedback").textContent = "Patch copied.";
+    } catch (err) {
+      $("compareFeedback").textContent = "Could not copy patch: " + err.message;
+    }
+  });
+  $("compareDownloadBtn").addEventListener("click", function () {
+    if (!currentPatch) return;
+    var blob = new Blob([currentPatch], { type: "text/x-diff;charset=utf-8" });
+    var url = URL.createObjectURL(blob);
+    var link = document.createElement("a");
+    link.href = url;
+    link.download = "sortfolio-code-comparison.patch";
+    link.click();
+    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+    $("compareFeedback").textContent = "Patch downloaded.";
+  });
+
   /* ---------- analysis ---------- */
   function setLoading(on, text) {
     show($("emptyState"), false); show($("resultBody"), false); show($("loadingState"), on);

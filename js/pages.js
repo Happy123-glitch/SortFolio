@@ -27,6 +27,7 @@
   /* ================= SETTINGS ================= */
   var settings = load("sf_settings", DEFAULTS);
   var draft = Object.assign({}, settings);
+  var demoProfile = load("sf_demo_profile", { name: "", email: "demo@sortfolio.local" });
 
   function displayName() { return settings.name || sessionStorage.getItem("sf_name") || SF.modeLabel; }
   function applyAccent(key) {
@@ -37,7 +38,8 @@
   function applySettings(initial) {
     applyAccent(settings.accent);
     document.body.classList.toggle("calm", !!settings.calm);
-    $("logoutBtn").textContent = displayName().split(/\s+/).map(function (w) { return w[0]; }).join("").slice(0, 2).toUpperCase();
+    $("avatarBtn").textContent = displayName().split(/\s+/).map(function (w) { return w[0]; }).join("").slice(0, 2).toUpperCase();
+    $("avatarBtn").title = "View profile (" + displayName() + ")";
     $("acName").textContent = displayName();
     $("acMode").textContent = SF.modeLabel;
     $("acStore").textContent = SF.demo ? "Sample data, resets on reload" : "This browser (localStorage)";
@@ -46,6 +48,132 @@
       var seg = document.querySelector('.seg-btn[data-type="' + settings.type + '"]'); if (seg) seg.click();
     }
   }
+  function clearProfilePassword() {
+    $("profileCurrentPassword").value = "";
+    $("profileNewPassword").value = "";
+    $("profileConfirmPassword").value = "";
+  }
+  function closeProfile() {
+    $("profileModal").hidden = true;
+    clearProfilePassword();
+  }
+  function initials(name) {
+    return String(name || "User").trim().split(/\s+/).map(function (word) { return word[0]; }).join("").slice(0, 2).toUpperCase();
+  }
+  function updateProfilePreview() {
+    var name = $("profileName").value.trim() || "Your name";
+    var email = $("profileEmail").value.trim() || "Your email";
+    $("profileAvatar").textContent = initials(name);
+    $("profileDisplayName").textContent = name;
+    $("profileDisplayEmail").textContent = email;
+  }
+  function openProfile() {
+    var email = sessionStorage.getItem("sf_email") || "";
+    var users = window.SFUsers;
+    var account = users && email ? users.find(email) : null;
+    var editable = SF.demo || (SF.modeLabel === "User" && !!account);
+    var name = account ? account.name : (SF.demo ? demoProfile.name || sessionStorage.getItem("sf_name") || "Demo" : sessionStorage.getItem("sf_name") || SF.modeLabel);
+    var profileEmail = account ? account.email : (SF.demo ? demoProfile.email : email || (SF.modeLabel === "Admin" ? "admin@sortfolio.dev" : ""));
+    $("profileName").value = name;
+    $("profileEmail").value = profileEmail;
+    $("profileName").disabled = !editable;
+    $("profileEmail").disabled = !editable;
+    $("profilePassword").disabled = !editable || SF.demo;
+    $("profilePassword").hidden = SF.demo || !editable;
+    $("saveProfileBtn").hidden = !editable;
+    $("profileReadOnly").hidden = editable;
+    $("profileDemoNote").hidden = !SF.demo;
+    $("profileBadge").textContent = SF.demo ? "Demo profile" : editable ? "Local account" : "Read-only";
+    $("profileMode").textContent = SF.demo ? "Demo · This browser" : editable ? "User · Local account" : SF.modeLabel + " · Read-only";
+    var created = account && account.created || (SF.demo && demoProfile.created);
+    $("profileCreated").textContent = created ? new Date(created).toLocaleDateString() : SF.demo ? "Demo session" : "Not available";
+    $("profileError").hidden = true;
+    $("profileError").textContent = "";
+    $("profileSaved").textContent = "";
+    clearProfilePassword();
+    updateProfilePreview();
+    $("profileModal").hidden = false;
+    if (editable) $("profileName").focus();
+    else $("closeProfileModalBtn").focus();
+  }
+  $("avatarBtn").addEventListener("click", openProfile);
+  $("closeProfileModalBtn").addEventListener("click", closeProfile);
+  $("cancelProfileBtn").addEventListener("click", closeProfile);
+  $("profileModal").addEventListener("click", function (e) {
+    if (e.target === $("profileModal")) closeProfile();
+  });
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape" && !$("profileModal").hidden) closeProfile();
+  });
+  $("profileName").addEventListener("input", updateProfilePreview);
+  $("profileEmail").addEventListener("input", updateProfilePreview);
+  $("profileForm").addEventListener("submit", async function (e) {
+    e.preventDefault();
+    var email = sessionStorage.getItem("sf_email") || "";
+    var users = window.SFUsers;
+    var account = users && email ? users.find(email) : null;
+    var demo = SF.demo;
+    if (!demo && (SF.modeLabel !== "User" || !account)) return;
+
+    var name = $("profileName").value.trim();
+    var updatedEmail = $("profileEmail").value.trim().toLowerCase();
+    var currentPassword = $("profileCurrentPassword").value;
+    var newPassword = $("profileNewPassword").value;
+    var confirmPassword = $("profileConfirmPassword").value;
+    var error = "";
+    $("profileError").textContent = "";
+    if (name.length < 2) error = "Enter your full name.";
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(updatedEmail)) error = "Enter a valid email address.";
+    else if (!demo && (updatedEmail === "admin@sortfolio.dev" || (updatedEmail !== account.email && users.find(updatedEmail)))) error = "An account with this email already exists.";
+
+    var changingPassword = !demo && !!(currentPassword || newPassword || confirmPassword);
+    if (!error && changingPassword) {
+      if (!currentPassword || !newPassword || !confirmPassword) error = "Fill in all password fields to change your password.";
+      else if (newPassword.length < 8) error = "Use a new password with at least 8 characters.";
+      else if (newPassword !== confirmPassword) error = "The new passwords do not match.";
+      else if (await users.hash(currentPassword) !== account.hash) error = "Your current password is incorrect.";
+    }
+    if (error) {
+      $("profileError").textContent = error;
+      $("profileError").hidden = false;
+      $("profileSaved").textContent = "";
+      return;
+    }
+
+    if (demo) {
+      demoProfile = { name: name, email: updatedEmail, created: demoProfile.created || Date.now() };
+      if (!store("sf_demo_profile", demoProfile)) {
+        $("profileError").textContent = "Could not save your profile. Allow browser storage and try again.";
+        $("profileError").hidden = false;
+        return;
+      }
+    } else {
+      var changes = { name: name, email: updatedEmail };
+      if (changingPassword) changes.hash = await users.hash(newPassword);
+      if (!users.update(account.email, changes)) {
+        $("profileError").textContent = "Could not save your profile. Allow browser storage and try again.";
+        $("profileError").hidden = false;
+        return;
+      }
+      sessionStorage.setItem("sf_email", updatedEmail);
+    }
+
+    sessionStorage.setItem("sf_name", name);
+    settings.name = name;
+    draft.name = name;
+    var settingsSaved = store("sf_settings", settings);
+    if (!settingsSaved) {
+      $("profileError").textContent = "Profile saved, but the display name preference could not be saved.";
+      $("profileError").hidden = false;
+    }
+    applySettings(false);
+    $("profileError").hidden = !$("profileError").textContent;
+    $("profileSaved").textContent = $("profileError").hidden ? "Profile saved." : "";
+    $("profileEmail").value = updatedEmail;
+    $("profileCreated").textContent = new Date(demo ? demoProfile.created : account.created).toLocaleDateString();
+    updateProfilePreview();
+    clearProfilePassword();
+  });
   function fillSettings() {
     $("setName").value = draft.name || sessionStorage.getItem("sf_name") || "";
     $("setType").value = draft.type; $("setRepo").value = draft.repo;

@@ -9,9 +9,11 @@
 
   if (sessionStorage.getItem("sf_mode")) { location.replace("index.html"); return; }
 
-  function go(mode, name) {
+  function go(mode, name, email) {
     sessionStorage.setItem("sf_mode", mode);
     sessionStorage.setItem("sf_name", name || "");
+    if (email) sessionStorage.setItem("sf_email", email);
+    else sessionStorage.removeItem("sf_email");
     document.body.classList.add("leaving");
     setTimeout(function () { location.href = "index.html"; }, 350);
   }
@@ -25,9 +27,9 @@
     e.preventDefault();
     var email = document.getElementById("email").value.trim().toLowerCase();
     var pass = document.getElementById("password").value;
-    if (email === ADMIN.email && pass === ADMIN.password) { go("admin", "Admin"); return; }
+    if (email === ADMIN.email && pass === ADMIN.password) { go("admin", "Admin", ADMIN.email); return; }
     var user = SFUsers.find(email);
-    if (user && user.hash === await SFUsers.hash(pass)) { go("user", user.name); return; }
+    if (user && user.hash === await SFUsers.hash(pass)) { go("user", user.name, user.email); return; }
     fail();
   });
 

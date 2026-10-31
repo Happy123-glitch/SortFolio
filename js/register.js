@@ -1,37 +1,59 @@
+/* Supabase account registration. */
 (function () {
   "use strict";
-  if (sessionStorage.getItem("sf_mode")) { location.replace("index.html"); return; }
-
   var form = document.getElementById("regForm");
   var err = document.getElementById("regError");
   var card = document.getElementById("regCard");
+  var submitButton = form.querySelector('button[type="submit"]');
 
-  function fail(msg) {
-    err.textContent = msg; err.hidden = false;
-    card.classList.remove("shake"); void card.offsetWidth; card.classList.add("shake");
+  function fail(message) {
+    err.textContent = message;
+    err.hidden = false;
+    card.classList.remove("shake");
+    void card.offsetWidth;
+    card.classList.add("shake");
   }
 
-  form.addEventListener("submit", async function (e) {
-    e.preventDefault();
+  function enterApp(session, name) {
+    sessionStorage.setItem("sf_mode", "user");
+    sessionStorage.setItem("sf_name", name);
+    if (session.user.email) sessionStorage.setItem("sf_email", session.user.email);
+    document.body.classList.add("leaving");
+    setTimeout(function () { location.href = "index.html"; }, 350);
+  }
+
+  form.addEventListener("submit", async function (event) {
+    event.preventDefault();
     err.hidden = true;
     var name = document.getElementById("name").value.trim();
     var email = document.getElementById("email").value.trim().toLowerCase();
-    var pass = document.getElementById("password").value;
+    var password = document.getElementById("password").value;
     var confirm = document.getElementById("confirm").value;
 
     if (name.length < 2) return fail("Enter your full name.");
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return fail("Enter a valid email address, like you@example.com.");
-    if (pass.length < 8) return fail("Use a password with at least 8 characters.");
-    if (pass !== confirm) return fail("The two passwords do not match.");
-    if (email === "admin@sortfolio.dev" || SFUsers.find(email)) return fail("An account with this email already exists. Sign in instead.");
+    if (password.length < 8) return fail("Use a password with at least 8 characters.");
+    if (password !== confirm) return fail("The two passwords do not match.");
+    if (!window.SFBackend.isReady()) {
+      return fail("Registration needs Supabase configured. Set the project URL and public anon key in js/supabase-config.js.");
+    }
 
-    var ok = SFUsers.add({ name: name, email: email, hash: await SFUsers.hash(pass), created: Date.now() });
-    if (!ok) return fail("This browser blocked saving your account. Allow site storage and try again.");
-
-    sessionStorage.setItem("sf_mode", "user");
-    sessionStorage.setItem("sf_name", name);
-    sessionStorage.setItem("sf_email", email);
-    document.body.classList.add("leaving");
-    setTimeout(function () { location.href = "index.html"; }, 350);
+    submitButton.disabled = true;
+    try {
+      var result = await window.SFBackend.signUp(name, email, password);
+      if (result.session) {
+        enterApp(result.session, name);
+        return;
+      }
+      err.textContent = "Account created. Verify your email, then sign in.";
+      err.hidden = false;
+      document.getElementById("email").value = email;
+      document.getElementById("password").value = "";
+      document.getElementById("confirm").value = "";
+    } catch (error) {
+      fail(error.message || "Could not create your account.");
+    } finally {
+      submitButton.disabled = false;
+    }
   });
 })();

@@ -45,12 +45,23 @@
   }
   $("nav").addEventListener("click", function (e) { var b = e.target.closest(".nav-btn"); if (b) setView(b.dataset.view); });
   $$("[data-goto]").forEach(function (b) { b.addEventListener("click", function () { setView(b.dataset.goto); }); });
-  $("logoutBtn").addEventListener("click", function () {
+  $("logoutBtn").addEventListener("click", async function () {
+    var button = this;
+    button.disabled = true;
+    var logoutError = "";
+    try {
+      if (window.SFBackend && window.SFBackend.isConfigured()) await window.SFBackend.signOut();
+    } catch (error) {
+      logoutError = error.message || "Could not clear the Supabase session.";
+    }
     sessionStorage.removeItem("sf_mode");
     sessionStorage.removeItem("sf_name");
     sessionStorage.removeItem("sf_email");
     document.body.classList.add("leaving");
-    setTimeout(function () { location.href = "login.html"; }, 300);
+    setTimeout(function () {
+      if (logoutError) sessionStorage.setItem("sf_logout_error", logoutError);
+      location.href = "login.html";
+    }, 300);
   });
 
   $("typeSeg").addEventListener("click", function (e) {

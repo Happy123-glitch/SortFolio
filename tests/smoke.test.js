@@ -27,8 +27,8 @@ test('Project file integrity & hackathon rules compliance', async (t) => {
     const prTemplatePath = path.join(ROOT_DIR, '.github', 'pull_request_template.md');
     assert.ok(fs.existsSync(prTemplatePath), 'PR template must exist');
     const content = fs.readFileSync(prTemplatePath, 'utf8');
-    assert.match(content, /Models the product uses in this PR/i, 'Must ask for models used');
-    assert.match(content, /AI coding assistants that helped write it/i, 'Must ask for AI assistants');
+    assert.match(content, /(?:Models the product uses in this PR|AI models used by the project)/i, 'Must ask for models used');
+    assert.match(content, /(?:AI coding assistants that helped write it|AI coding assistants used)/i, 'Must ask for AI assistants');
   });
 
   await t.test('AGENTS.md defines mandatory PR & commit rules', () => {

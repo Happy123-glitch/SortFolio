@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sortfolio · Admin login</title>
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body class="login-page">
+<main class="login-card" id="loginCard">
+  <div class="brand big"><span class="logo">S</span><span>Sortfolio</span></div>
+  <h1>Every claim deserves evidence.</h1>
+  <p class="muted">Sign in to analyze GitHub issues and pull requests.</p>
+
+  <form id="loginForm" novalidate>
+    <label for="email">Email</label>
+    <input id="email" type="email" placeholder="you@example.com" autocomplete="username" required>
+    <label for="password">Password</label>
+    <input id="password" type="password" placeholder="Password" autocomplete="current-password" required>
+    <p class="form-error" id="loginError" role="alert" hidden></p>
+    <button class="btn-gold" type="submit">Sign in</button>
+  </form>
+
+  <p class="switch">New here? <a href="register.html">Create an account</a></p>
+
+  <div class="divider"><span>or</span></div>
+  <button class="btn-ghost" id="demoBtn" type="button">Try the demo without login</button>
+  <p class="tiny muted">The demo uses sample data and makes no GitHub requests.</p>
+</main>
+<script src="js/users.js"></script>
+<script src="js/auth.js"></script>
+</body>
+</html>

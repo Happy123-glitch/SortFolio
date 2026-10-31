@@ -120,11 +120,13 @@ ALTER TABLE public.model_runs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.evaluation_cases ENABLE ROW LEVEL SECURITY;
 
 -- Anonymous users (browser UI) can view completed analyses and related evidence
+DROP POLICY IF EXISTS "Public can view completed analysis runs" ON public.analysis_runs;
 CREATE POLICY "Public can view completed analysis runs" 
     ON public.analysis_runs 
     FOR SELECT 
     USING (status = 'completed');
 
+DROP POLICY IF EXISTS "Public can view claims of completed runs" ON public.claims;
 CREATE POLICY "Public can view claims of completed runs" 
     ON public.claims 
     FOR SELECT 
@@ -136,6 +138,7 @@ CREATE POLICY "Public can view claims of completed runs"
         )
     );
 
+DROP POLICY IF EXISTS "Public can view evidence of completed runs" ON public.evidence_items;
 CREATE POLICY "Public can view evidence of completed runs" 
     ON public.evidence_items 
     FOR SELECT 
@@ -148,6 +151,7 @@ CREATE POLICY "Public can view evidence of completed runs"
         )
     );
 
+DROP POLICY IF EXISTS "Public can view model runs for completed analyses" ON public.model_runs;
 CREATE POLICY "Public can view model runs for completed analyses" 
     ON public.model_runs 
     FOR SELECT 
@@ -159,7 +163,14 @@ CREATE POLICY "Public can view model runs for completed analyses"
         )
     );
 
+DROP POLICY IF EXISTS "Public can view evaluation cases" ON public.evaluation_cases;
+CREATE POLICY "Public can view evaluation cases" 
+    ON public.evaluation_cases 
+    FOR SELECT 
+    USING (true);
+
 -- Service Role Key (Backend Edge Functions) has full access
+DROP POLICY IF EXISTS "Service role full access on analysis_runs" ON public.analysis_runs;
 CREATE POLICY "Service role full access on analysis_runs" 
     ON public.analysis_runs 
     FOR ALL 
@@ -167,6 +178,7 @@ CREATE POLICY "Service role full access on analysis_runs"
     USING (true) 
     WITH CHECK (true);
 
+DROP POLICY IF EXISTS "Service role full access on claims" ON public.claims;
 CREATE POLICY "Service role full access on claims" 
     ON public.claims 
     FOR ALL 
@@ -174,6 +186,7 @@ CREATE POLICY "Service role full access on claims"
     USING (true) 
     WITH CHECK (true);
 
+DROP POLICY IF EXISTS "Service role full access on evidence_items" ON public.evidence_items;
 CREATE POLICY "Service role full access on evidence_items" 
     ON public.evidence_items 
     FOR ALL 
@@ -181,6 +194,7 @@ CREATE POLICY "Service role full access on evidence_items"
     USING (true) 
     WITH CHECK (true);
 
+DROP POLICY IF EXISTS "Service role full access on model_runs" ON public.model_runs;
 CREATE POLICY "Service role full access on model_runs" 
     ON public.model_runs 
     FOR ALL 
@@ -188,6 +202,7 @@ CREATE POLICY "Service role full access on model_runs"
     USING (true) 
     WITH CHECK (true);
 
+DROP POLICY IF EXISTS "Service role full access on evaluation_cases" ON public.evaluation_cases;
 CREATE POLICY "Service role full access on evaluation_cases" 
     ON public.evaluation_cases 
     FOR ALL 

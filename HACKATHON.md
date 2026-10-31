@@ -2,16 +2,8 @@
 
 ## Team
 
--   **Team name:** `[quadrax]`
-  -  members are ``` 
-  [Dhairya] ```
-   [Aayush Dhiman] 
-   [Happy Rawat] ``` 
-   nameis "SortFolio" 
-
-> Replace the team and member placeholders with the actual details
-> before the initial commit. The project plan assigns four work areas;
-> adapt the allocation if your team has fewer members.
+-   **Team name:** Quadrax
+-   **Team members:** Dhairya, Aayush Dhiman, and Happy Rawat
 
 ## Selected Problem
 
@@ -178,6 +170,11 @@ The existing issue-analysis workflow remains the priority. New features must reu
     evidence or test results.
 
 ### Model disclosure and accuracy
+
+No model integration is present in the repository yet. Qwen Instruct is
+a plan, not a model currently used by the product. Once integrated,
+record the exact model identifier, version, runtime, and purpose here.
+Do not claim a model is used until the submitted code actually calls it.
 
 Qwen Instruct is **planned**, not represented here as already
 integrated. Before submission, update this section with the exact model
@@ -557,24 +554,43 @@ add multiple models, many languages, or automated GitHub comments.
 
 ## Repository and Open-Source Workflow
 
--   Create a new, empty, public GitHub repository.
--   The initial commit must contain **only `HACKATHON.md`**.
--   After the initial commit, every change must go through a pull
-    request; do not commit directly to `main`.
+-   For a new repository, make the first commit contain **only
+    `HACKATHON.md`**. This repository's existing first commit predates
+    this file; preserve published history and record that requirement as
+    unmet rather than rewriting the commit.
+-   After the first commit, make every change on a new branch and open a
+    pull request. Never push changes directly to `main`.
+-   Run the repository's tests through GitHub Actions on every pull
+    request. Merge only after all required CI checks pass. If working
+    solo, review and merge your own passing pull request.
+-   Every commit message and pull request must disclose both the AI
+    coding assistant(s) used and the AI model(s) used by the product.
+    Write `None` when no assistant or product model was used. Keep the
+    product-model disclosure accurate; a planned model is not a model
+    used by the project.
+
+    Example commit message:
+
+    ```text
+    Add evidence report examples
+
+    Coding agent: GitHub Copilot
+    Models used in project: None integrated; Qwen Instruct is planned
+    ```
+
 -   Use an MIT or Apache-2.0 open-source licence.
 -   Add `README.md`, `.github/pull_request_template.md`, and
     `.github/workflows/ci.yml`.
--   Include an `examples/` directory with representative sample input
-    and the real output produced by Sortfolio.
--   CI should install dependencies, run tests, and validate the project
-    on every pull request.
+-   Add real tests for the project's code and an `examples/` directory
+    with representative sample input and the actual output produced by
+    Sortfolio.
+-   CI must install the project, run its tests, and pass before changes
+    are merged.
 -   Use public data for evaluation and do not publish automated issues
     or comments on real open-source projects.
 -   Never commit API keys, credentials, tokens, or other secrets.
 -   Every team member must understand and be able to explain the
     implementation.
--   Pull requests should disclose AI models and AI coding assistants
-    used for the change, as required by the event workflow.
 
 ## Demo Plan for Judges
 
@@ -624,15 +640,17 @@ add multiple models, many languages, or automated GitHub comments.
 
 ## Submission Checklist
 
--   [ ] Replace the team-name and member-name placeholders.
+-   [ ] Confirm the team name and member names are accurate.
 -   [ ] Confirm that the project name is Sortfolio.
 -   [ ] Finalize and verify the exact Qwen model identifier and
     inference route before claiming it is integrated.
--   [ ] Create a new, empty, public GitHub repository.
--   [ ] Put only this `HACKATHON.md` in the initial commit.
+-   [ ] For a new repository, put only this `HACKATHON.md` in the
+    initial commit. For this existing repository, preserve history and
+    disclose that the initial-commit requirement was missed.
 -   [ ] Use an MIT or Apache-2.0 licence.
 -   [ ] Submit the repository link by **8:30 PM on 31 October 2026**.
--   [ ] Add the pull-request template and passing GitHub Actions CI.
+-   [ ] Add real tests, the pull-request template, and passing GitHub
+    Actions CI.
 -   [ ] Include real sample inputs and outputs in `examples/`.
 -   [ ] Merge all final work by **6:30 AM on 1 November 2026**.
 -   [ ] Submit the project through OrganizerHQ by the stated **6:30 AM**

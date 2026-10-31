@@ -28,8 +28,10 @@
   var settings = load("sf_settings", DEFAULTS);
   var draft = Object.assign({}, settings);
   var demoProfile = load("sf_demo_profile", { name: "", email: "demo@sortfolio.local" });
+  var profileData = null;
+  var profileUsesDatabase = false;
 
-  function displayName() { return settings.name || sessionStorage.getItem("sf_name") || SF.modeLabel; }
+  function displayName() { return sessionStorage.getItem("sf_name") || settings.name || SF.modeLabel; }
   function applyAccent(key) {
     var a = ACCENTS[key] || ACCENTS.gold, r = document.documentElement.style;
     r.setProperty("--gold", a[0]); r.setProperty("--gold2", a[1]); r.setProperty("--gold-hi", a[2]); r.setProperty("--gold-lo", a[3]);
@@ -67,34 +69,60 @@
     $("profileDisplayName").textContent = name;
     $("profileDisplayEmail").textContent = email;
   }
-  function openProfile() {
-    var email = sessionStorage.getItem("sf_email") || "";
-    var users = window.SFUsers;
-    var account = users && email ? users.find(email) : null;
-    var editable = SF.demo || (SF.modeLabel === "User" && !!account);
-    var name = account ? account.name : (SF.demo ? demoProfile.name || sessionStorage.getItem("sf_name") || "Demo" : sessionStorage.getItem("sf_name") || SF.modeLabel);
-    var profileEmail = account ? account.email : (SF.demo ? demoProfile.email : email || (SF.modeLabel === "Admin" ? "admin@sortfolio.dev" : ""));
-    $("profileName").value = name;
-    $("profileEmail").value = profileEmail;
-    $("profileName").disabled = !editable;
-    $("profileEmail").disabled = !editable;
-    $("profilePassword").disabled = !editable || SF.demo;
-    $("profilePassword").hidden = SF.demo || !editable;
-    $("saveProfileBtn").hidden = !editable;
+  async function openProfile() {
+    var demo = SF.demo;
+    var editable = demo || SF.modeLabel === "User";
+    profileUsesDatabase = !!(window.SFBackend && window.SFBackend.isReady());
+    profileData = null;
+    $("profileName").disabled = true;
+    $("profileEmail").disabled = true;
+    $("profilePassword").disabled = true;
+    $("saveProfileBtn").hidden = true;
     $("profileReadOnly").hidden = editable;
-    $("profileDemoNote").hidden = !SF.demo;
-    $("profileBadge").textContent = SF.demo ? "Demo profile" : editable ? "Local account" : "Read-only";
-    $("profileMode").textContent = SF.demo ? "Demo · This browser" : editable ? "User · Local account" : SF.modeLabel + " · Read-only";
-    var created = account && account.created || (SF.demo && demoProfile.created);
-    $("profileCreated").textContent = created ? new Date(created).toLocaleDateString() : SF.demo ? "Demo session" : "Not available";
+    $("profileDemoNote").hidden = !demo;
+    $("profileBadge").textContent = demo ? (profileUsesDatabase ? "Demo account" : "Offline demo") : "Supabase account";
+    $("profileMode").textContent = demo ? (profileUsesDatabase ? "Demo · Database" : "Demo · This browser") : "User · Supabase";
+    $("profileCreated").textContent = "Loading…";
     $("profileError").hidden = true;
     $("profileError").textContent = "";
     $("profileSaved").textContent = "";
     clearProfilePassword();
-    updateProfilePreview();
     $("profileModal").hidden = false;
-    if (editable) $("profileName").focus();
-    else $("closeProfileModalBtn").focus();
+    $("closeProfileModalBtn").focus();
+
+    try {
+      if (profileUsesDatabase) {
+        var authUser = await window.SFBackend.getCurrentUser();
+        if (authUser.email) sessionStorage.setItem("sf_email", authUser.email);
+        profileData = await window.SFBackend.getProfile();
+      } else if (demo) {
+        profileData = {
+          full_name: demoProfile.name || sessionStorage.getItem("sf_name") || "Demo",
+          contact_email: demoProfile.email || "demo@sortfolio.local",
+          created_at: demoProfile.created || null
+        };
+      } else {
+        throw new Error("Supabase is unavailable. Your account profile could not be loaded.");
+      }
+
+      $("profileName").value = profileData.full_name || sessionStorage.getItem("sf_name") || (demo ? "Demo" : "");
+      $("profileEmail").value = profileData.contact_email || sessionStorage.getItem("sf_email") || "";
+      $("profileName").disabled = !editable;
+      $("profileEmail").disabled = !editable;
+      $("profilePassword").disabled = !editable || demo || !profileUsesDatabase;
+      $("profilePassword").hidden = demo || !editable || !profileUsesDatabase;
+      $("saveProfileBtn").hidden = !editable;
+      $("profileDemoNote").textContent = profileUsesDatabase
+        ? "Demo profile edits are saved to your Supabase account."
+        : "Demo profile edits are saved in this browser only; configure Supabase to sync them.";
+      var created = profileData.created_at;
+      $("profileCreated").textContent = created ? new Date(created).toLocaleDateString() : demo ? "Demo session" : "Not available";
+      updateProfilePreview();
+      if (editable) $("profileName").focus();
+    } catch (error) {
+      $("profileError").textContent = error.message || "Could not load your profile.";
+      $("profileError").hidden = false;
+    }
   }
   $("avatarBtn").addEventListener("click", openProfile);
   $("closeProfileModalBtn").addEventListener("click", closeProfile);
@@ -109,11 +137,9 @@
   $("profileEmail").addEventListener("input", updateProfilePreview);
   $("profileForm").addEventListener("submit", async function (e) {
     e.preventDefault();
-    var email = sessionStorage.getItem("sf_email") || "";
-    var users = window.SFUsers;
-    var account = users && email ? users.find(email) : null;
     var demo = SF.demo;
-    if (!demo && (SF.modeLabel !== "User" || !account)) return;
+    var editable = demo || SF.modeLabel === "User";
+    if (!editable || !profileData) return;
 
     var name = $("profileName").value.trim();
     var updatedEmail = $("profileEmail").value.trim().toLowerCase();
@@ -124,14 +150,12 @@
     $("profileError").textContent = "";
     if (name.length < 2) error = "Enter your full name.";
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(updatedEmail)) error = "Enter a valid email address.";
-    else if (!demo && (updatedEmail === "admin@sortfolio.dev" || (updatedEmail !== account.email && users.find(updatedEmail)))) error = "An account with this email already exists.";
 
     var changingPassword = !demo && !!(currentPassword || newPassword || confirmPassword);
     if (!error && changingPassword) {
       if (!currentPassword || !newPassword || !confirmPassword) error = "Fill in all password fields to change your password.";
       else if (newPassword.length < 8) error = "Use a new password with at least 8 characters.";
       else if (newPassword !== confirmPassword) error = "The new passwords do not match.";
-      else if (await users.hash(currentPassword) !== account.hash) error = "Your current password is incorrect.";
     }
     if (error) {
       $("profileError").textContent = error;
@@ -140,22 +164,44 @@
       return;
     }
 
-    if (demo) {
-      demoProfile = { name: name, email: updatedEmail, created: demoProfile.created || Date.now() };
-      if (!store("sf_demo_profile", demoProfile)) {
-        $("profileError").textContent = "Could not save your profile. Allow browser storage and try again.";
-        $("profileError").hidden = false;
-        return;
+    var accountChanged = false;
+    var emailChangeRequested = false;
+    try {
+      if (profileUsesDatabase) {
+        if (changingPassword) {
+          await window.SFBackend.verifyPassword(currentPassword);
+        }
+        var changes = !demo ? { data: { full_name: name } } : {};
+        if (!demo && updatedEmail !== (sessionStorage.getItem("sf_email") || "")) {
+          changes.email = updatedEmail;
+          emailChangeRequested = true;
+        }
+        if (changingPassword) changes.password = newPassword;
+        if (Object.keys(changes).length) {
+          await window.SFBackend.updateAccount(changes);
+          accountChanged = true;
+        }
+        profileData = await window.SFBackend.saveProfile({ full_name: name, contact_email: updatedEmail });
+      } else if (demo) {
+        demoProfile = { name: name, email: updatedEmail, created: demoProfile.created || Date.now() };
+        if (!store("sf_demo_profile", demoProfile)) {
+          throw new Error("Could not save your profile. Allow browser storage and try again.");
+        }
+        profileData = {
+          full_name: demoProfile.name,
+          contact_email: demoProfile.email,
+          created_at: new Date(demoProfile.created).toISOString()
+        };
+      } else {
+        throw new Error("Supabase is unavailable. Your profile was not saved.");
       }
-    } else {
-      var changes = { name: name, email: updatedEmail };
-      if (changingPassword) changes.hash = await users.hash(newPassword);
-      if (!users.update(account.email, changes)) {
-        $("profileError").textContent = "Could not save your profile. Allow browser storage and try again.";
-        $("profileError").hidden = false;
-        return;
-      }
-      sessionStorage.setItem("sf_email", updatedEmail);
+    } catch (saveError) {
+      $("profileError").textContent = accountChanged
+        ? "Your account details changed, but the profile could not be saved: " + (saveError.message || "Unknown error.")
+        : (saveError.message || "Could not save your profile.");
+      $("profileError").hidden = false;
+      $("profileSaved").textContent = "";
+      return;
     }
 
     sessionStorage.setItem("sf_name", name);
@@ -168,9 +214,15 @@
     }
     applySettings(false);
     $("profileError").hidden = !$("profileError").textContent;
-    $("profileSaved").textContent = $("profileError").hidden ? "Profile saved." : "";
+    $("profileSaved").textContent = $("profileError").hidden
+      ? profileUsesDatabase
+        ? "Profile saved to Supabase." + (emailChangeRequested ? " Confirm your new email using the message Supabase sent." : "")
+        : "Profile saved in this browser only."
+      : "";
     $("profileEmail").value = updatedEmail;
-    $("profileCreated").textContent = new Date(demo ? demoProfile.created : account.created).toLocaleDateString();
+    $("profileCreated").textContent = profileData.created_at
+      ? new Date(profileData.created_at).toLocaleDateString()
+      : demo ? "Demo session" : "Not available";
     updateProfilePreview();
     clearProfilePassword();
     if ($("profileError").hidden) {
@@ -178,7 +230,7 @@
     }
   });
   function fillSettings() {
-    $("setName").value = draft.name || sessionStorage.getItem("sf_name") || "";
+    $("setName").value = sessionStorage.getItem("sf_name") || draft.name || "";
     $("setType").value = draft.type; $("setRepo").value = draft.repo;
     $("setKeep").value = String(draft.keep); $("setCalm").checked = !!draft.calm;
     applyAccent(draft.accent);

@@ -45,12 +45,23 @@
   }
   $("nav").addEventListener("click", function (e) { var b = e.target.closest(".nav-btn"); if (b) setView(b.dataset.view); });
   $$("[data-goto]").forEach(function (b) { b.addEventListener("click", function () { setView(b.dataset.goto); }); });
-  $("logoutBtn").addEventListener("click", function () {
+  $("logoutBtn").addEventListener("click", async function () {
+    var button = this;
+    button.disabled = true;
+    var logoutError = "";
+    try {
+      if (window.SFBackend && window.SFBackend.isConfigured()) await window.SFBackend.signOut();
+    } catch (error) {
+      logoutError = error.message || "Could not clear the Supabase session.";
+    }
     sessionStorage.removeItem("sf_mode");
     sessionStorage.removeItem("sf_name");
     sessionStorage.removeItem("sf_email");
     document.body.classList.add("leaving");
-    setTimeout(function () { location.href = "login.html"; }, 300);
+    setTimeout(function () {
+      if (logoutError) sessionStorage.setItem("sf_logout_error", logoutError);
+      location.href = "login.html";
+    }, 300);
   });
 
   $("typeSeg").addEventListener("click", function (e) {
@@ -429,16 +440,7 @@
       headers["Authorization"] = "token " + token;
     }
     var res = await fetch("https://api.github.com" + path, { headers: headers });
-    if (res.status === 403 || res.status === 429) {
-      var remaining = res.headers ? res.headers.get("x-ratelimit-remaining") : null;
-      var msg = remaining === "0"
-        ? "GitHub rate limit reached (60 req/hr unauthenticated)."
-        : "GitHub API access restricted (403 Forbidden).";
-      if (!token) {
-        msg += " Please add a GitHub Key to authenticate with 5,000 requests/hr.";
-      }
-      throw new Error(msg);
-    }
+    if (res.status === 403 || res.status === 429) throw new Error("GitHub API rate limit reached. Connect a GitHub token and retry.");
     if (res.status === 404) throw new Error("Not found. Check the repository URL and number; only public repositories work.");
     if (!res.ok) throw new Error("GitHub returned status " + res.status + ".");
     return raw ? res.text() : res.json();
@@ -748,10 +750,35 @@
     } catch (err) {
       console.warn("GitHub API error fetching " + repo + ":", err.message);
       var fallback = getFallbackRepoItems(repo, type);
-      fallback.isOfficial = false;
-      fallback.error = err.message;
-      return fallback;
+      if (fallback && fallback.length) {
+        fallback.isOfficial = false;
+        fallback.error = err.message;
+        return fallback;
+      }
+      throw err;
     }
+  }
+
+  function renderRepoItemsError(container, err, retry) {
+    if (!container) return;
+
+    var item = document.createElement("li");
+    item.style.cssText = "text-align:center;padding:24px;color:var(--bad);";
+    item.textContent = "Could not load real GitHub items: " + (err.message || "Unknown error");
+
+    if (err.message && err.message.includes("GitHub API rate limit reached")) {
+      var button = document.createElement("button");
+      button.type = "button";
+      button.className = "btn-ghost sm";
+      button.textContent = "Connect GitHub token and retry";
+      button.addEventListener("click", function () {
+        demandGitHubToken(retry);
+      });
+      item.appendChild(document.createElement("br"));
+      item.appendChild(button);
+    }
+
+    container.replaceChildren(item);
   }
 
   function sortRepoItems(items, sortMode) {
@@ -925,7 +952,9 @@
       }
     } catch (err) {
       show($("repoExplorerLoading"), false);
-      $("repoItemsList").innerHTML = '<li style="text-align:center;padding:24px;color:var(--bad);">' + err.message + '</li>';
+      renderRepoItemsError($("repoItemsList"), err, function () {
+        openRepoExplorer(repo, type);
+      });
     }
   }
 
@@ -1633,9 +1662,9 @@
       renderInspectorPRs();
     } catch (err) {
       show($("inspectorLoading"), false);
-      if ($("inspectorPRList")) {
-        $("inspectorPRList").innerHTML = '<li style="text-align:center;padding:24px;color:var(--bad);">Could not load PRs: ' + err.message + '</li>';
-      }
+      renderRepoItemsError($("inspectorPRList"), err, function () {
+        loadInspectorPRs(repo);
+      });
     }
   }
 

@@ -181,3 +181,7 @@ export class SortfolioAPI {
     ];
   }
 }
+
+if (typeof window !== 'undefined') {
+  window.SortfolioAPI = SortfolioAPI;
+}

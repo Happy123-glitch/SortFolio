@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sortfolio · Evidence-based issue and PR triage</title>
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body class="app-page">
+<header class="topbar">
+  <div class="brand"><span class="logo">S</span><span>Sortfolio</span></div>
+  <nav class="nav" id="nav">
+    <button class="nav-btn active" data-view="home">🏠 Home</button>
+    <button class="nav-btn" data-view="history">🕘 History</button>
+    <button class="nav-btn" data-view="settings">⚙️ Settings</button>
+    <button class="nav-btn" data-view="about">ⓘ About</button>
+  </nav>
+  <div class="user">
+    <span class="mode-pill" id="modePill">Admin</span>
+    <button class="avatar" id="logoutBtn" title="Log out">AD</button>
+  </div>
+</header>
+
+<main>
+<!-- HOME -->
+<section class="view active" id="view-home">
+  <div class="hero">
+    <div class="hero-text">
+      <h1>Sortfolio</h1>
+      <h2>Every claim deserves evidence.</h2>
+      <p>Verify GitHub issues and pull requests with AI-powered analysis and source-level evidence.</p>
+    </div>
+    <div class="hero-badge" aria-hidden="true">
+      <svg viewBox="0 0 16 16" class="gh"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+      <span class="shield">✔</span>
+    </div>
+  </div>
+
+  <form class="panel analyze" id="analyzeForm" novalidate>
+    <h3>⚡ Analyze Issue or PR</h3>
+    <div class="analyze-row">
+      <div class="seg" id="typeSeg">
+        <button type="button" class="seg-btn active" data-type="issue">❗ Issue</button>
+        <button type="button" class="seg-btn" data-type="pull">⑂ Pull Request</button>
+      </div>
+      <label class="field grow"><span>🔗</span><input id="repoUrl" type="text" placeholder="https://github.com/octocat/hello-world" aria-label="Repository URL"></label>
+      <label class="field num"><span>#</span><input id="itemNum" type="number" min="1" placeholder="42" aria-label="Issue or PR number"></label>
+      <button class="btn-gold" type="submit" id="analyzeBtn">▶ Analyze</button>
+    </div>
+    <p class="form-error" id="analyzeError" role="alert" hidden></p>
+  </form>
+
+  <div class="grid">
+    <div class="side">
+    <aside class="panel recent">
+      <div class="panel-head"><h3>🕘 Recent Analyses</h3><button class="link" data-goto="history">View All →</button></div>
+      <ul class="recent-list" id="recentList"></ul>
+    </aside>
+    <div class="panel overview"><div class="panel-head"><h3>📊 Verdict overview</h3></div><div class="stats three" id="homeStats"></div><p class="muted small">Counts come from your history. Verdicts are advisory.</p></div>
+    </div>
+
+    <section class="panel result" id="resultPanel">
+      <div class="empty" id="emptyState">
+        <div class="empty-icon">🔍</div>
+        <h3>No analysis yet</h3>
+        <p class="muted">Enter a public repository URL and an issue number, then select Analyze.</p>
+      </div>
+      <div class="loading" id="loadingState" hidden>
+        <div class="spinner"></div>
+        <p id="loadingText">Fetching issue…</p>
+      </div>
+      <div id="resultBody" hidden>
+        <div class="result-head">
+          <div class="check">✔</div>
+          <div class="grow"><h3 id="resTitle">Analysis Completed</h3><p class="muted" id="resMeta"></p></div>
+          <div class="conf" id="resConf"></div>
+        </div>
+        <div class="tabs" id="tabs">
+          <button class="tab active" data-tab="claims">☰ Claim Breakdown</button>
+          <button class="tab" data-tab="graph">⛓ Evidence Graph</button>
+          <button class="tab" data-tab="repro">⚗ Reproduction Results</button>
+          <button class="tab" data-tab="summary">📄 Summary</button>
+        </div>
+        <div class="tabpane active" id="tab-claims"><ul class="claim-list" id="claimList"></ul></div>
+        <div class="tabpane" id="tab-graph"><ul class="graph-list" id="graphList"></ul></div>
+        <div class="tabpane" id="tab-repro"><p class="repro-text" id="reproText"></p></div>
+        <div class="tabpane" id="tab-summary">
+          <div class="stats" id="statsRow"></div>
+          <p class="note">Sortfolio is advisory. A maintainer makes the final decision; nothing is posted to GitHub automatically.</p>
+          <button class="btn-ghost" id="exportBtn" type="button">Download JSON report</button>
+        </div>
+      </div>
+    </section>
+
+    <aside class="side">
+      <div class="panel explorer">
+        <div class="panel-head"><h3>📄 Evidence Explorer</h3></div>
+        <div class="code-box">
+          <div class="code-title" id="codeTitle">No evidence selected</div>
+          <div class="code" id="codeView"></div>
+          <a class="src-link" id="srcLink" href="#" target="_blank" rel="noopener" hidden>Open on GitHub ↗</a>
+        </div>
+      </div>
+      <div class="panel lab">
+        <div class="panel-head"><h3>⚗ Reproduction Lab</h3><span class="chip ok" id="labChip">Not run</span></div>
+        <p class="lab-line" id="labTest">Static inspection only.</p>
+        <p class="lab-result" id="labResult">No test was attempted.</p>
+      </div>
+    </aside>
+  </div>
+
+  <div class="bottom">
+    <div class="panel next"><span class="bulb">💡</span><div class="grow"><h3>What's Next?</h3><p class="muted">Add more context or check related issues for deeper insights.</p></div><button class="btn-outline" id="relatedBtn" type="button">Check Related Issues →</button></div>
+    <div class="panel help"><span class="bulb">💬</span><div class="grow"><h4>Need Help?</h4><button class="link" data-goto="about">Read how it works →</button></div><span class="bot">🤖</span></div>
+  </div>
+</section>
+
+<!-- HISTORY -->
+<section class="view" id="view-history">
+  <div class="page-grid">
+    <div class="panel">
+      <div class="panel-head"><h3>🕘 History</h3><button class="btn-outline" id="clearHistory" type="button">Clear history</button></div>
+      <div class="toolbar">
+        <label class="field grow"><span>🔎</span><input id="histSearch" type="search" placeholder="Search repository, title or note" aria-label="Search history"></label>
+        <select class="select in" id="histFilter" aria-label="Filter by verdict"><option value="all">All verdicts</option><option>Valid</option><option>Uncertain</option><option>Invalid</option></select>
+      </div>
+      <ul class="hist-list" id="historyList"></ul>
+    </div>
+    <aside class="side">
+      <div class="panel"><h3>📊 Overview</h3><div class="stats three" id="histStats"></div><p class="muted small" id="histTop"></p></div>
+      <div class="panel"><h3>🧾 Export</h3><p class="muted small">Download your history, including your notes and verdict edits, as JSON.</p><div class="actions"><button class="btn-ghost" id="exportHistory" type="button">Download history</button></div></div>
+      <div class="panel"><h3>✏️ Editing tips</h3><p class="muted small">Change a verdict if you disagree with it, and add a note to record why. Sortfolio is advisory; the maintainer decides.</p></div>
+    </aside>
+  </div>
+</section>
+
+<!-- SETTINGS -->
+<section class="view" id="view-settings">
+  <div class="page-grid">
+    <form class="panel" id="settingsForm" novalidate>
+      <h3>⚙️ Preferences</h3>
+      <div class="form-grid">
+        <label>Display name<input class="in" id="setName" type="text" maxlength="40" placeholder="Your name"></label>
+        <label>Default analysis type<select class="select in" id="setType"><option value="issue">Issue</option><option value="pull">Pull Request</option></select></label>
+        <label class="wide">Default repository URL<input class="in" id="setRepo" type="text" placeholder="https://github.com/owner/repo"></label>
+        <label>History entries to keep<select class="select in" id="setKeep"><option value="10">10</option><option value="30">30</option><option value="50">50</option></select></label>
+        <label class="check-row"><input type="checkbox" id="setCalm"> Reduce motion</label>
+        <fieldset class="wide"><legend>Accent colour</legend>
+          <div class="swatches" id="swatches">
+            <button type="button" class="sw active" data-accent="gold" aria-label="Gold"></button>
+            <button type="button" class="sw" data-accent="emerald" aria-label="Emerald"></button>
+            <button type="button" class="sw" data-accent="azure" aria-label="Azure"></button>
+            <button type="button" class="sw" data-accent="rose" aria-label="Rose"></button>
+          </div>
+        </fieldset>
+      </div>
+      <div class="actions"><button class="btn-gold" type="submit">Save settings</button><button class="btn-ghost auto" type="button" id="resetSettings">Reset to defaults</button></div>
+      <p class="saved" id="settingsSaved" role="status"></p>
+    </form>
+    <aside class="side">
+      <div class="panel"><h3>👤 Account</h3>
+        <dl class="kv small"><dt>Name</dt><dd id="acName"></dd><dt>Mode</dt><dd id="acMode"></dd><dt>Storage</dt><dd id="acStore"></dd></dl></div>
+      <div class="panel"><h3>🧠 Model disclosure</h3>
+        <dl class="kv small"><dt>Planned model</dt><dd>Qwen Instruct. The exact model ID is not finalized, and this frontend calls no model.</dd><dt>Role</dt><dd>Claim extraction and evidence explanation, server-side in a Supabase Edge Function.</dd><dt>Checks</dt><dd>Rule-based claims, verified against files fetched from the GitHub REST API.</dd><dt>Tokens</dt><dd>No GitHub token is stored in the browser.</dd></dl></div>
+    </aside>
+  </div>
+</section>
+
+<!-- ABOUT -->
+<section class="view" id="view-about">
+  <div class="page-grid flip">
+    <div class="side">
+      <div class="panel"><h3>ⓘ How Sortfolio works</h3>
+        <ol class="steps">
+          <li>Enter a public repository and an issue or pull request number.</li>
+          <li>Sortfolio extracts individual technical claims and keeps the original wording.</li>
+          <li>Each claim is checked against source files, with exact line numbers.</li>
+          <li>Every claim gets a status, and missing evidence is stated plainly.</li>
+          <li>One unsupported claim never makes the whole issue "fake".</li>
+        </ol></div>
+      <div class="panel"><h3>🏷 Claim statuses</h3>
+        <ul class="legend">
+          <li><span class="chip s-supported">Supported</span>Inspected evidence supports the claim.</li>
+          <li><span class="chip s-contradicted">Contradicted</span>Inspected evidence conflicts with the claim.</li>
+          <li><span class="chip s-unverified">Unverified</span>Evidence is missing, ambiguous or out of scope.</li>
+          <li><span class="chip s-insufficient">Insufficient Evidence</span>Nothing measurable was found, such as a benchmark.</li>
+        </ul></div>
+    </div>
+    <form class="panel" id="aboutForm" novalidate>
+      <h3>✏️ Project and team details</h3>
+      <div class="form-grid">
+        <label class="wide">Team name<input class="in" id="abTeam" type="text" maxlength="60" placeholder="Your team name"></label>
+        <label class="wide">Members (one per line)<textarea class="in" id="abMembers" rows="4" placeholder="Member 1&#10;Member 2"></textarea></label>
+        <label class="wide">AI model<input class="in" id="abModel" type="text" maxlength="80"></label>
+        <label>Inference route<select class="select in" id="abRoute"><option>Hosted</option><option>Local</option></select></label>
+        <label class="check-row"><input type="checkbox" id="abIntegrated"> Model is actually integrated</label>
+      </div>
+      <pre class="preview" id="abPreview"></pre>
+      <div class="actions"><button class="btn-gold" type="submit">Save details</button><button class="btn-ghost auto" type="button" id="abCopy">Copy HACKATHON.md text</button></div>
+      <p class="saved" id="aboutSaved" role="status"></p>
+    </form>
+  </div>
+</section>
+</main>
+
+<!-- Templates (cloned by js/app.js) -->
+<template id="tpl-recent"><li class="recent-item"><span class="gh-dot">●</span><div class="grow"><b data-f="title"></b><small data-f="sub"></small></div><div class="r-right"><small data-f="time"></small><span class="chip" data-f="status"></span></div></li></template>
+<template id="tpl-claim"><li class="claim"><span class="num" data-f="num"></span><div class="grow"><b data-f="text"></b><small data-f="where"></small></div><span class="chip" data-f="status"></span><button class="btn-outline sm" data-f="view" type="button">View Details →</button></li></template>
+<template id="tpl-graph"><li class="graph-item"><span data-f="claim"></span><i>→</i><span class="node" data-f="target"></span></li></template>
+<template id="tpl-line"><div class="code-line"><span class="ln" data-f="n"></span><code data-f="t"></code></div></template>
+<template id="tpl-hist"><li class="hist-item"><div class="hist-main"><b data-f="title"></b><small data-f="sub"></small><small class="muted" data-f="time"></small></div><div class="hist-edit"><select class="select in" data-r="status" aria-label="Verdict"><option>Valid</option><option>Uncertain</option><option>Invalid</option></select><input class="in note-input" type="text" data-r="note" placeholder="Add a note" maxlength="120" aria-label="Note"><button class="btn-outline sm del" data-r="del" type="button">Delete</button></div></li></template>
+<template id="tpl-stat"><div class="stat"><b data-f="v"></b><small data-f="l"></small></div></template>
+
+<script src="js/data.js"></script>
+<script src="js/app.js"></script>
+<script src="js/pages.js"></script>
+</body>
+</html>

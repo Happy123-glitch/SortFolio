@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sortfolio · Create account</title>
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body class="login-page">
+<main class="login-card" id="regCard">
+  <div class="brand big"><span class="logo">S</span><span>Sortfolio</span></div>
+  <h1>Create your account</h1>
+  <p class="muted">Register to analyze GitHub issues and pull requests with source-level evidence.</p>
+
+  <form id="regForm" novalidate>
+    <label for="name">Full name</label>
+    <input id="name" type="text" placeholder="Your name" autocomplete="name" required>
+    <label for="email">Email</label>
+    <input id="email" type="email" placeholder="you@example.com" autocomplete="email" required>
+    <label for="password">Password</label>
+    <input id="password" type="password" placeholder="At least 8 characters" autocomplete="new-password" required>
+    <label for="confirm">Confirm password</label>
+    <input id="confirm" type="password" placeholder="Repeat password" autocomplete="new-password" required>
+    <p class="form-error" id="regError" role="alert" hidden></p>
+    <button class="btn-gold" type="submit">Create account</button>
+  </form>
+
+  <p class="switch">Already have an account? <a href="login.html">Sign in</a></p>
+</main>
+<script src="js/users.js"></script>
+<script src="js/register.js"></script>
+</body>
+</html>

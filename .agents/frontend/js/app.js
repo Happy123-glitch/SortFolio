@@ -30,6 +30,18 @@
   $("logoutBtn").title = "Log out" + (userName ? " (" + userName + ")" : "");
 
   function setView(name) {
+    if (name === "feedback") {
+      name = "home";
+      show($("emptyState"), false);
+      show($("loadingState"), false);
+      show($("resultBody"), true);
+      var fbTab = document.querySelector('.tab[data-tab="feedback"]');
+      if (fbTab) fbTab.click();
+      setTimeout(function () {
+        var el = $("feedbackText");
+        if (el) el.focus();
+      }, 100);
+    }
     $$(".view").forEach(function (v) { v.classList.toggle("active", v.id === "view-" + name); });
     $$(".nav-btn").forEach(function (b) { b.classList.toggle("active", b.dataset.view === name); });
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -126,6 +138,10 @@
 
     var first = r.claims.filter(function (c) { return c.evidence; })[0];
     showEvidence(first ? first.evidence : null);
+    var fbTarget = $("feedbackTargetName");
+    if (fbTarget) {
+      fbTarget.textContent = r.repo + " #" + r.number + " (" + (r.type || "issue") + ")";
+    }
     show($("emptyState"), false); show($("loadingState"), false); show($("resultBody"), true);
   }
 
@@ -1035,6 +1051,193 @@
     });
   }
 
+  /* ---------- Feedback & Improvements Tab Logic ---------- */
+  function renderFeedbackList() {
+    var container = $("feedbackCardsList");
+    if (!container || !window.SortfolioFeedback) return;
+    var list = window.SortfolioFeedback.loadFeedback();
+    if ($("feedbackBacklogCount")) {
+      $("feedbackBacklogCount").textContent = list.length + (list.length === 1 ? " item" : " items");
+    }
+
+    fill(container, list.map(function (item) {
+      var card = document.createElement("div");
+      card.className = "feedback-card" + (item.isNew ? " newly-added" : "");
+      card.id = "card-" + item.id;
+
+      var top = document.createElement("div");
+      top.className = "feedback-card-top";
+
+      var meta = document.createElement("div");
+      meta.className = "feedback-card-meta";
+
+      var catChip = document.createElement("span");
+      catChip.className = "node";
+      catChip.textContent = item.categoryLabel || item.category;
+
+      var targetChip = document.createElement("span");
+      targetChip.className = "node";
+      targetChip.style.borderColor = "var(--line)";
+      targetChip.style.color = "var(--muted)";
+      targetChip.textContent = item.target || "General Platform";
+
+      var stars = document.createElement("span");
+      stars.style.color = "var(--gold)";
+      stars.style.fontSize = "13px";
+      stars.textContent = "★".repeat(item.rating || 5) + "☆".repeat(5 - (item.rating || 5));
+
+      meta.appendChild(catChip);
+      meta.appendChild(targetChip);
+      meta.appendChild(stars);
+
+      var statusPill = document.createElement("span");
+      var stKey = String(item.status || "Under Review").toLowerCase().replace(/\s+/g, "-");
+      statusPill.className = "status-pill " + stKey;
+      statusPill.textContent = item.status || "Under Review";
+
+      top.appendChild(meta);
+      top.appendChild(statusPill);
+
+      var textP = document.createElement("p");
+      textP.className = "feedback-card-text";
+      textP.textContent = item.text;
+
+      card.appendChild(top);
+      card.appendChild(textP);
+
+      if (item.suggestion) {
+        var sug = document.createElement("div");
+        sug.className = "feedback-card-suggestion";
+        sug.textContent = "Suggested: " + item.suggestion;
+        card.appendChild(sug);
+      }
+
+      var btm = document.createElement("div");
+      btm.className = "feedback-card-bottom";
+
+      var authorSpan = document.createElement("span");
+      authorSpan.textContent = "Submitted by " + (item.author || "@anonymous") + " • " + (item.timestamp || "recent");
+
+      var upvoteBtn = document.createElement("button");
+      upvoteBtn.type = "button";
+      upvoteBtn.className = "feedback-upvote-btn" + (item.upvoted ? " upvoted" : "");
+      upvoteBtn.innerHTML = "<span>👍</span> <strong>" + (item.upvotes || 0) + "</strong>";
+      upvoteBtn.title = item.upvoted ? "Remove upvote" : "Upvote this improvement";
+      upvoteBtn.addEventListener("click", function () {
+        var updated = window.SortfolioFeedback.toggleUpvote(null, item.id);
+        if (updated) {
+          item.upvotes = updated.upvotes;
+          item.upvoted = updated.upvoted;
+          upvoteBtn.className = "feedback-upvote-btn" + (item.upvoted ? " upvoted" : "");
+          upvoteBtn.querySelector("strong").textContent = String(item.upvotes);
+        }
+      });
+
+      btm.appendChild(authorSpan);
+      btm.appendChild(upvoteBtn);
+      card.appendChild(btm);
+
+      return card;
+    }));
+  }
+
+  // Star rating interactivity
+  if ($("starRating")) {
+    var starBtns = $$("#starRating .star-btn");
+    var ratingInput = $("feedbackRating");
+    var starLabel = $("starValueText");
+
+    function setStarRating(val) {
+      if (ratingInput) ratingInput.value = val;
+      starBtns.forEach(function (btn) {
+        var bVal = parseInt(btn.dataset.val, 10);
+        btn.classList.toggle("active", bVal <= val);
+      });
+      if (starLabel && window.SortfolioFeedback) {
+        starLabel.textContent = window.SortfolioFeedback.getRatingLabel(val);
+      }
+    }
+
+    starBtns.forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        var val = parseInt(btn.dataset.val, 10);
+        setStarRating(val);
+      });
+    });
+  }
+
+  // Character counter
+  if ($("feedbackText")) {
+    $("feedbackText").addEventListener("input", function () {
+      var len = this.value.length;
+      if ($("feedbackCharCount")) {
+        $("feedbackCharCount").textContent = len + " / 500 characters";
+        if (len > 500) {
+          $("feedbackCharCount").style.color = "var(--bad)";
+        } else {
+          $("feedbackCharCount").style.color = "var(--muted)";
+        }
+      }
+    });
+  }
+
+  // Feedback form submit
+  if ($("feedbackForm")) {
+    $("feedbackForm").addEventListener("submit", function (e) {
+      e.preventDefault();
+      if (!window.SortfolioFeedback) return;
+
+      var text = $("feedbackText").value;
+      var cat = $("feedbackCategory").value;
+      var rating = parseInt($("feedbackRating").value, 10) || 5;
+      var suggestion = $("feedbackSuggestion") ? $("feedbackSuggestion").value : "";
+      var author = $("feedbackAuthor") ? $("feedbackAuthor").value : "";
+      var target = $("feedbackTargetName") ? $("feedbackTargetName").textContent : "General Platform";
+
+      try {
+        var created = window.SortfolioFeedback.addFeedback(null, {
+          category: cat,
+          target: target,
+          rating: rating,
+          text: text,
+          suggestion: suggestion,
+          author: author
+        });
+        created.isNew = true;
+
+        renderFeedbackList();
+
+        // Reset form
+        $("feedbackText").value = "";
+        if ($("feedbackSuggestion")) $("feedbackSuggestion").value = "";
+        if ($("feedbackCharCount")) $("feedbackCharCount").textContent = "0 / 500 characters";
+        if (typeof setStarRating === "function") setStarRating(5);
+
+        var savedEl = $("feedbackSaved");
+        if (savedEl) {
+          savedEl.textContent = "✔ Thank you! Your feedback has been recorded.";
+          savedEl.classList.add("show");
+          setTimeout(function () { savedEl.classList.remove("show"); }, 3500);
+        }
+      } catch (err) {
+        var savedEl = $("feedbackSaved");
+        if (savedEl) {
+          savedEl.textContent = "⚠ " + err.message;
+          savedEl.classList.add("show");
+          setTimeout(function () { savedEl.classList.remove("show"); }, 3500);
+        }
+      }
+    });
+  }
+
+  if ($("openFeedbackQuickBtn")) {
+    $("openFeedbackQuickBtn").addEventListener("click", function () {
+      setView("feedback");
+      var p = $("tab-feedback");
+      if (p) p.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }
+
   if (mode === "demo") { $("repoUrl").value = "https://github.com/octocat/hello-world"; $("itemNum").value = 42; }
   window.SF = {
     getHistory: getHistory,
@@ -1049,4 +1252,5 @@
   };
   renderHistory();
   renderPortfolio();
+  renderFeedbackList();
 })();

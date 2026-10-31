@@ -285,6 +285,230 @@
     renderReport(r);
   }
 
+  /* ---------- URL & Reference Parsing ---------- */
+  function parseGitHubInput(input) {
+    if (!input) return null;
+    var raw = input.trim();
+    // 1. Pull Request URL: https://github.com/owner/repo/pull/1
+    var prMatch = raw.match(/github\.com\/([\w.\-]+)\/([\w.\-]+?)\/(?:pull|pulls)\/(\d+)/i);
+    if (prMatch) {
+      return { repo: prMatch[1] + "/" + prMatch[2], num: parseInt(prMatch[3], 10), type: "pull", cleanUrl: "https://github.com/" + prMatch[1] + "/" + prMatch[2] };
+    }
+    // 2. Issue URL: https://github.com/owner/repo/issues/1
+    var issueMatch = raw.match(/github\.com\/([\w.\-]+)\/([\w.\-]+?)\/issues\/(\d+)/i);
+    if (issueMatch) {
+      return { repo: issueMatch[1] + "/" + issueMatch[2], num: parseInt(issueMatch[3], 10), type: "issue", cleanUrl: "https://github.com/" + issueMatch[1] + "/" + issueMatch[2] };
+    }
+    // 3. Repository URL: https://github.com/owner/repo
+    var repoMatch = raw.match(/github\.com\/([\w.\-]+)\/([\w.\-]+?)(?:\.git)?(?:[\/#?].*)?$/i);
+    if (repoMatch) {
+      return { repo: repoMatch[1] + "/" + repoMatch[2], num: null, type: null, cleanUrl: "https://github.com/" + repoMatch[1] + "/" + repoMatch[2] };
+    }
+    // 4. Shorthand "owner/repo"
+    var shortMatch = raw.match(/^([\w.\-]+)\/([\w.\-]+)$/i);
+    if (shortMatch) {
+      return { repo: shortMatch[1] + "/" + shortMatch[2], num: null, type: null, cleanUrl: "https://github.com/" + shortMatch[1] + "/" + shortMatch[2] };
+    }
+    return null;
+  }
+
+  // Auto-detect PR/issue number on pasting into URL field
+  $("repoUrl").addEventListener("input", function () {
+    var parsed = parseGitHubInput(this.value);
+    if (parsed && parsed.num) {
+      $("itemNum").value = parsed.num;
+      if (parsed.type) {
+        itemType = parsed.type;
+        $$(".seg-btn").forEach(function (x) { x.classList.toggle("active", x.dataset.type === itemType); });
+      }
+    }
+  });
+
+  /* ---------- Repository PR & Issue Explorer with Sorting ---------- */
+  var repoItemsState = {
+    repo: "",
+    type: "pull",
+    items: [],
+    filter: "all",
+    sort: "number-desc",
+    query: ""
+  };
+
+  async function fetchRepoItems(repo, type) {
+    var endpoint = type === "pull"
+      ? "/repos/" + repo + "/pulls?state=all&per_page=50"
+      : "/repos/" + repo + "/issues?state=all&per_page=50";
+
+    var rawItems = await gh(endpoint);
+    if (type === "issue") {
+      rawItems = rawItems.filter(function (it) { return !it.pull_request; });
+    }
+    return rawItems.map(function (it) {
+      var state = it.state;
+      if (it.pull_request && it.merged_at) state = "merged";
+      return {
+        number: it.number,
+        title: it.title,
+        state: state,
+        author: it.user ? it.user.login : "unknown",
+        updatedAt: it.updated_at,
+        htmlUrl: it.html_url
+      };
+    });
+  }
+
+  function sortRepoItems(items, sortMode) {
+    var copy = items.slice();
+    switch (sortMode) {
+      case "number-desc":
+        return copy.sort(function (a, b) { return b.number - a.number; });
+      case "number-asc":
+        return copy.sort(function (a, b) { return a.number - b.number; });
+      case "date-desc":
+        return copy.sort(function (a, b) { return new Date(b.updatedAt) - new Date(a.updatedAt); });
+      case "state-open":
+        return copy.sort(function (a, b) {
+          if (a.state === "open" && b.state !== "open") return -1;
+          if (a.state !== "open" && b.state === "open") return 1;
+          return b.number - a.number;
+        });
+      case "title-asc":
+        return copy.sort(function (a, b) { return a.title.localeCompare(b.title); });
+      default:
+        return copy;
+    }
+  }
+
+  function renderRepoExplorer() {
+    var container = $("repoItemsList");
+    if (!container) return;
+
+    var filtered = repoItemsState.items.filter(function (it) {
+      if (repoItemsState.filter === "open" && it.state !== "open") return false;
+      if (repoItemsState.filter === "closed" && it.state === "open") return false;
+      if (repoItemsState.query) {
+        var q = repoItemsState.query.toLowerCase();
+        var matchTitle = it.title.toLowerCase().includes(q);
+        var matchAuthor = it.author.toLowerCase().includes(q);
+        var matchNum = String(it.number).includes(q);
+        return matchTitle || matchAuthor || matchNum;
+      }
+      return true;
+    });
+
+    var sorted = sortRepoItems(filtered, repoItemsState.sort);
+
+    var openCount = repoItemsState.items.filter(function (it) { return it.state === "open"; }).length;
+    var closedCount = repoItemsState.items.filter(function (it) { return it.state !== "open"; }).length;
+    $("countAll").textContent = repoItemsState.items.length;
+    $("countOpen").textContent = openCount;
+    $("countClosed").textContent = closedCount;
+
+    if (!sorted.length) {
+      container.innerHTML = '<li style="text-align:center;padding:24px;color:var(--muted);">No matching ' + (repoItemsState.type === "pull" ? "pull requests" : "issues") + ' found in this repository.</li>';
+      return;
+    }
+
+    container.innerHTML = sorted.map(function (it) {
+      var badgeClass = it.state === "open" ? "badge-open" : it.state === "merged" ? "badge-merged" : "badge-closed";
+      var badgeText = it.state.toUpperCase();
+      var dateStr = new Date(it.updatedAt).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+      var safeTitle = it.title.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+      return '<li class="repo-item-card">' +
+        '<div class="repo-item-info">' +
+          '<div class="repo-item-title">' +
+            '<span style="color:var(--gold);font-family:monospace;font-weight:700;">#' + it.number + '</span> ' +
+            '<span>' + safeTitle + '</span> ' +
+            '<span class="' + badgeClass + '">' + badgeText + '</span>' +
+          '</div>' +
+          '<div class="repo-item-meta">' +
+            '<span>👤 @' + it.author + '</span>' +
+            '<span>🕒 Updated ' + dateStr + '</span>' +
+            '<a href="' + it.htmlUrl + '" target="_blank" rel="noopener" style="color:var(--muted);text-decoration:none;">View on GitHub ↗</a>' +
+          '</div>' +
+        '</div>' +
+        '<button type="button" class="btn-analyze-item" data-num="' + it.number + '">⚡ Analyze ' + (repoItemsState.type === "pull" ? "PR" : "Issue") + '</button>' +
+      '</li>';
+    }).join("");
+
+    container.querySelectorAll(".btn-analyze-item").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        var num = parseInt(btn.dataset.num, 10);
+        $("itemNum").value = num;
+        runLive(repoItemsState.repo, num);
+        $("resultPanel").scrollIntoView({ behavior: "smooth" });
+      });
+    });
+  }
+
+  async function openRepoExplorer(repo, type) {
+    showError("");
+    show($("repoExplorerPanel"), true);
+    show($("repoExplorerLoading"), true);
+    $("repoItemsList").innerHTML = "";
+    $("repoExplorerTitle").textContent = (type === "pull" ? "⑂ Pull Requests" : "❗ Issues") + " in " + repo;
+    $("repoExplorerSubtitle").textContent = "Browse and sort " + (type === "pull" ? "pull requests" : "issues") + " to run evidence-based code triage.";
+
+    try {
+      var items = await fetchRepoItems(repo, type);
+      repoItemsState.repo = repo;
+      repoItemsState.type = type;
+      repoItemsState.items = items;
+      show($("repoExplorerLoading"), false);
+      renderRepoExplorer();
+
+      // If exactly 1 item exists and itemNum is not set, automatically analyze it for the user
+      if (items.length === 1 && !$("itemNum").value) {
+        $("itemNum").value = items[0].number;
+        runLive(repo, items[0].number);
+      }
+    } catch (err) {
+      show($("repoExplorerLoading"), false);
+      $("repoItemsList").innerHTML = '<li style="text-align:center;padding:24px;color:var(--bad);">' + err.message + '</li>';
+    }
+  }
+
+  if ($("browseRepoBtn")) {
+    $("browseRepoBtn").addEventListener("click", async function () {
+      var parsed = parseGitHubInput($("repoUrl").value);
+      if (!parsed) {
+        showError("Enter a repository URL first to browse and sort its pull requests.");
+        return;
+      }
+      await openRepoExplorer(parsed.repo, itemType);
+    });
+  }
+
+  if ($("repoExplorerCloseBtn")) {
+    $("repoExplorerCloseBtn").addEventListener("click", function () {
+      show($("repoExplorerPanel"), false);
+    });
+  }
+
+  $$("#repoExplorerFilter .repo-filter-btn").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      $$("#repoExplorerFilter .repo-filter-btn").forEach(function (b) { b.classList.remove("active"); });
+      btn.classList.add("active");
+      repoItemsState.filter = btn.dataset.filter;
+      renderRepoExplorer();
+    });
+  });
+
+  if ($("repoSortSelect")) {
+    $("repoSortSelect").addEventListener("change", function () {
+      repoItemsState.sort = this.value;
+      renderRepoExplorer();
+    });
+  }
+
+  if ($("repoSearchInput")) {
+    $("repoSearchInput").addEventListener("input", function () {
+      repoItemsState.query = this.value.trim();
+      renderRepoExplorer();
+    });
+  }
+
   $$(".preset-btn").forEach(function (btn) {
     btn.addEventListener("click", function () {
       var repo = btn.dataset.repo;
@@ -303,11 +527,16 @@
     try {
       if (mode === "demo") { await runDemo(); }
       else {
-        var m = $("repoUrl").value.trim().match(/github\.com\/([\w.\-]+)\/([\w.\-]+?)(?:\.git)?(?:[\/#?].*)?$/i);
-        var num = parseInt($("itemNum").value, 10);
-        if (!m) throw new Error("Enter a full GitHub repository URL, like https://github.com/octocat/hello-world.");
-        if (!num || num < 1) throw new Error("Enter the issue or pull request number.");
-        await runLive(m[1] + "/" + m[2], num);
+        var parsed = parseGitHubInput($("repoUrl").value);
+        if (!parsed) throw new Error("Enter a full GitHub repository URL, like https://github.com/octocat/hello-world.");
+
+        var num = parseInt($("itemNum").value, 10) || parsed.num;
+        if (!num || num < 1) {
+          // If no number is specified, automatically fetch and sort the pull requests / issues!
+          await openRepoExplorer(parsed.repo, itemType);
+          return;
+        }
+        await runLive(parsed.repo, num);
       }
     } catch (err) {
       setLoading(false); show($("emptyState"), !currentReport); show($("resultBody"), !!currentReport);

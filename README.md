@@ -22,6 +22,7 @@ Sortfolio evaluates **individual testable technical claims** against real reposi
 2. **Deterministic Source Verification:** Authoritative Python AST parsing and git diff inspection locate real signatures, parameters, classes, and lines. **The AI model never invents line numbers or file paths.**
 3. **Honest Uncertainty Quality:** If a claim lacks reproducible evidence, Sortfolio marks it as **Unverified** rather than making a guess or false accusation.
 4. **Transparent Audit Logging:** Every AI model call is recorded in PostgreSQL with provider, model ID, latency, and outcome.
+5. **Reviewed Code-Fix Suggestions:** The local comparison view can flag a few common JavaScript/TypeScript patterns and generate a corrected copy in the After editor while leaving Before unchanged. Suggestions are limited heuristics, not a full code review or correctness guarantee.
 
 ---
 

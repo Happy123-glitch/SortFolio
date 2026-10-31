@@ -75,7 +75,7 @@ graph TD
 ## 🚀 Quickstart & Demo Guide
 
 ### 1. Run Automated Test Suite
-Sortfolio includes **68 comprehensive automated tests** validating every layer:
+Sortfolio includes **83 comprehensive automated tests** validating every layer:
 ```bash
 npm test
 ```
@@ -137,6 +137,21 @@ Sortfolio includes an interactive conversational chatbot drawer for maintainers:
   - 📍 **"Show verified code lines"**: Displays code anchors and file lines extracted by deterministic analysis.
   - ❓ **"What evidence is missing?"**: Outlines evidence gaps for unverified issues without speculating.
 - **Hallucination-Proof Grounding:** Powered by **Qwen 2.5 7B** with strict output sanitization and authoritative deterministic fallback. All queries are audited under `model_runs`.
+
+---
+
+## 📁 Multi-Repository Portfolio Hub ("Sort" + "Portfolio")
+
+Sortfolio features a persistent **Multi-Repository Portfolio** right on the dashboard:
+- **Tracked Repositories Shelf:** Displays repository cards for all your tracked projects (including `me-agrim-rehan/reachable-vulnerability`, `pallets/flask`, `tiangolo/fastapi`, `psf/requests`).
+- **1-Click Switching:** Click any repository card to switch context instantly without typing URLs.
+- **Repository Explorer & Sorting:**
+  - View all pull requests and issues with status badges (`OPEN`, `CLOSED`, `MERGED`).
+  - Sort pull requests by **Newest/Oldest (#)**, **Updated Date**, **Open First**, or **Title (A–Z)**.
+- **Quick Add & Pin:**
+  - Click **➕ Add Repo** to add any public GitHub repository.
+  - Click **⭐ Pin** while analyzing to immediately save the repository to your portfolio.
+  - State is saved persistently in `localStorage`.
 
 ---
 

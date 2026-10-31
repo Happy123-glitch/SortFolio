@@ -36,6 +36,25 @@
     </div>
   </div>
 
+  <section class="panel repo-portfolio" id="repoPortfolioSection">
+    <div class="portfolio-head">
+      <div class="portfolio-title-group">
+        <span class="portfolio-icon">📁</span>
+        <div>
+          <h3>Tracked Repositories</h3>
+          <p class="muted small">Your multi-repo portfolio. Click any repository to browse PRs or run automated AST triage.</p>
+        </div>
+      </div>
+      <div class="portfolio-actions">
+        <span class="portfolio-counter" id="portfolioCounter">0 Repositories</span>
+        <button type="button" class="btn-gold sm" id="openAddRepoModalBtn">➕ Add Repo</button>
+      </div>
+    </div>
+    <div class="portfolio-grid" id="portfolioGrid">
+      <!-- Repo cards dynamically rendered -->
+    </div>
+  </section>
+
   <form class="panel analyze" id="analyzeForm" novalidate>
     <h3>⚡ Analyze Issue or PR</h3>
     <div class="analyze-row">
@@ -47,6 +66,7 @@
       <label class="field num"><span>#</span><input id="itemNum" type="number" min="1" placeholder="42" aria-label="Issue or PR number"></label>
       <button class="btn-gold" type="submit" id="analyzeBtn">▶ Analyze</button>
       <button class="btn-outline" type="button" id="browseRepoBtn" title="Fetch and sort all Pull Requests or Issues in this repository">📋 Browse &amp; Sort</button>
+      <button class="btn-ghost" type="button" id="pinCurrentRepoBtn" title="Pin / Add current repository to your Portfolio">⭐ Pin</button>
     </div>
     <div class="presets-row" style="margin-top: 12px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
       <small style="color: var(--muted, #8b949e); font-weight: 500;">Preset Demo Cases:</small>
@@ -275,6 +295,26 @@
     <input type="text" id="chatInput" placeholder="Ask about this issue or evidence..." autocomplete="off">
     <button type="submit" class="chat-send-btn" id="chatSendBtn">Send</button>
   </form>
+<!-- Add Repository Modal -->
+<div class="portfolio-modal-backdrop" id="addRepoModal" hidden>
+  <div class="portfolio-modal">
+    <div class="portfolio-modal-head">
+      <h3>➕ Add Repository to Portfolio</h3>
+      <button type="button" class="btn-ghost sm" id="closeAddRepoModalBtn">✕</button>
+    </div>
+    <form id="addRepoForm">
+      <p class="muted small" style="margin-bottom: 12px;">Enter any public GitHub repository URL or shorthand (e.g. <code>owner/repo</code>):</p>
+      <div class="field" style="margin-bottom: 14px;">
+        <span>🔗</span>
+        <input type="text" id="newRepoInput" placeholder="https://github.com/owner/repository" required>
+      </div>
+      <div style="display:flex; justify-content:flex-end; gap:8px;">
+        <button type="button" class="btn-ghost sm" id="cancelAddRepoBtn">Cancel</button>
+        <button type="submit" class="btn-gold sm" id="submitAddRepoBtn">Add to Portfolio</button>
+      </div>
+      <p class="form-error" id="addRepoError" style="margin-top:10px;" hidden></p>
+    </form>
+  </div>
 </div>
 
 <!-- Templates (cloned by js/app.js) -->

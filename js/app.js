@@ -707,7 +707,189 @@
     });
   });
 
+  /* ---------- Repository Portfolio System ---------- */
+  var DEFAULT_PORTFOLIO = [
+    { repo: "me-agrim-rehan/reachable-vulnerability", name: "reachable-vulnerability", owner: "me-agrim-rehan", description: "Security reachability analysis", openPRs: 1 },
+    { repo: "pallets/flask", name: "flask", owner: "pallets", description: "The Python micro framework", openPRs: 1 },
+    { repo: "tiangolo/fastapi", name: "fastapi", owner: "tiangolo", description: "FastAPI framework", openPRs: 0 },
+    { repo: "psf/requests", name: "requests", owner: "psf", description: "Python HTTP for Humans", openPRs: 0 }
+  ];
+
+  function getPortfolio() {
+    try {
+      var raw = localStorage.getItem("sf_portfolio_repos");
+      if (raw) {
+        var parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length) return parsed;
+      }
+    } catch (_) {}
+    return DEFAULT_PORTFOLIO.slice();
+  }
+
+  function savePortfolio(list) {
+    try {
+      localStorage.setItem("sf_portfolio_repos", JSON.stringify(list));
+    } catch (_) {}
+  }
+
+  var activePortfolioRepo = "";
+
+  function renderPortfolio() {
+    var grid = $("portfolioGrid");
+    var counter = $("portfolioCounter");
+    if (!grid) return;
+
+    var list = getPortfolio();
+    if (counter) counter.textContent = list.length + (list.length === 1 ? " Repository" : " Repositories");
+
+    if (!list.length) {
+      grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 20px; color: var(--muted);">' +
+        'No repositories in portfolio yet. Click "➕ Add Repo" to track a repository!</div>';
+      return;
+    }
+
+    grid.innerHTML = list.map(function (item) {
+      var isActive = activePortfolioRepo === item.repo || $("repoUrl").value.includes(item.repo);
+      var tagClass = item.openPRs > 0 ? "portfolio-card-tag has-pr" : "portfolio-card-tag";
+      var prLabel = item.openPRs > 0 ? "⑂ " + item.openPRs + " PR" : "⑂ 0 PRs";
+
+      return '<div class="portfolio-card' + (isActive ? ' active' : '') + '" data-repo="' + item.repo + '">' +
+        '<div class="portfolio-card-top">' +
+          '<div>' +
+            '<span class="portfolio-card-owner">@' + item.owner + '</span>' +
+            '<span class="portfolio-card-name">' + item.name + '</span>' +
+          '</div>' +
+          '<button type="button" class="portfolio-card-remove" data-remove="' + item.repo + '" title="Remove from portfolio">✕</button>' +
+        '</div>' +
+        '<div class="portfolio-card-bottom">' +
+          '<span class="' + tagClass + '">' + prLabel + '</span>' +
+          '<span style="color:var(--gold);font-size:12px;font-weight:600;">Browse →</span>' +
+        '</div>' +
+      '</div>';
+    }).join("");
+
+    grid.querySelectorAll(".portfolio-card").forEach(function (card) {
+      card.addEventListener("click", function (e) {
+        if (e.target.closest(".portfolio-card-remove")) return;
+        var repo = card.dataset.repo;
+        selectPortfolioRepo(repo);
+      });
+    });
+
+    grid.querySelectorAll(".portfolio-card-remove").forEach(function (btn) {
+      btn.addEventListener("click", function (e) {
+        e.stopPropagation();
+        var repoToRemove = btn.dataset.remove;
+        removeRepoFromPortfolio(repoToRemove);
+      });
+    });
+  }
+
+  function selectPortfolioRepo(repo) {
+    activePortfolioRepo = repo;
+    $("repoUrl").value = "https://github.com/" + repo;
+    $("itemNum").value = "";
+    itemType = "pull";
+    $$(".seg-btn").forEach(function (x) { x.classList.toggle("active", x.dataset.type === "pull"); });
+    renderPortfolio();
+    openRepoExplorer(repo, "pull");
+  }
+
+  function addRepoToPortfolio(repoInput) {
+    var parsed = parseGitHubInput(repoInput);
+    if (!parsed || !parsed.repo) {
+      throw new Error("Invalid GitHub repository format. Use 'owner/repo' or a full URL.");
+    }
+    var list = getPortfolio();
+    var exists = list.some(function (x) { return x.repo.toLowerCase() === parsed.repo.toLowerCase(); });
+    if (exists) {
+      throw new Error(parsed.repo + " is already in your portfolio!");
+    }
+    var parts = parsed.repo.split("/");
+    var newItem = {
+      repo: parsed.repo,
+      owner: parts[0],
+      name: parts[1],
+      description: "Custom repository",
+      openPRs: 1
+    };
+    list.unshift(newItem);
+    savePortfolio(list);
+    renderPortfolio();
+    selectPortfolioRepo(parsed.repo);
+  }
+
+  function removeRepoFromPortfolio(repo) {
+    var list = getPortfolio().filter(function (x) { return x.repo.toLowerCase() !== repo.toLowerCase(); });
+    savePortfolio(list);
+    if (activePortfolioRepo === repo) activePortfolioRepo = "";
+    renderPortfolio();
+  }
+
+  if ($("pinCurrentRepoBtn")) {
+    $("pinCurrentRepoBtn").addEventListener("click", function () {
+      var parsed = parseGitHubInput($("repoUrl").value);
+      if (!parsed || !parsed.repo) {
+        showError("Enter a repository URL first to pin it to your portfolio.");
+        return;
+      }
+      try {
+        addRepoToPortfolio(parsed.repo);
+        $("pinCurrentRepoBtn").textContent = "✓ Pinned";
+        setTimeout(function () { $("pinCurrentRepoBtn").textContent = "⭐ Pin"; }, 2000);
+      } catch (err) {
+        showError(err.message);
+      }
+    });
+  }
+
+  if ($("openAddRepoModalBtn")) {
+    $("openAddRepoModalBtn").addEventListener("click", function () {
+      show($("addRepoModal"), true);
+      $("newRepoInput").value = "";
+      show($("addRepoError"), false);
+      $("newRepoInput").focus();
+    });
+  }
+
+  if ($("closeAddRepoModalBtn")) {
+    $("closeAddRepoModalBtn").addEventListener("click", function () {
+      show($("addRepoModal"), false);
+    });
+  }
+
+  if ($("cancelAddRepoBtn")) {
+    $("cancelAddRepoBtn").addEventListener("click", function () {
+      show($("addRepoModal"), false);
+    });
+  }
+
+  if ($("addRepoForm")) {
+    $("addRepoForm").addEventListener("submit", function (e) {
+      e.preventDefault();
+      var input = $("newRepoInput").value.trim();
+      try {
+        addRepoToPortfolio(input);
+        show($("addRepoModal"), false);
+      } catch (err) {
+        $("addRepoError").textContent = err.message;
+        show($("addRepoError"), true);
+      }
+    });
+  }
+
   if (mode === "demo") { $("repoUrl").value = "https://github.com/octocat/hello-world"; $("itemNum").value = 42; }
-  window.SF = { getHistory: getHistory, setHistory: setHistory, renderHistory: renderHistory, modeLabel: modeLabel, demo: mode === "demo", onHistory: null };
+  window.SF = {
+    getHistory: getHistory,
+    setHistory: setHistory,
+    renderHistory: renderHistory,
+    getPortfolio: getPortfolio,
+    addRepoToPortfolio: addRepoToPortfolio,
+    removeRepoFromPortfolio: removeRepoFromPortfolio,
+    modeLabel: modeLabel,
+    demo: mode === "demo",
+    onHistory: null
+  };
   renderHistory();
+  renderPortfolio();
 })();

@@ -105,3 +105,17 @@ export interface AnalyzeIssueResponse {
   claims: Array<Claim & { evidence: EvidenceItem[] }>;
   modelRuns: ModelRun[];
 }
+
+export interface PresetProblem {
+  id: string;
+  title: string;
+  badge: string;
+  badgeType: 'success' | 'danger' | 'warning' | 'info';
+  repo: string;
+  issueNumber: number;
+  claimText: string;
+  claimType: ClaimType;
+  targetFile?: string;
+  expectedStatus: ClaimStatus;
+  description: string;
+}

@@ -123,4 +123,61 @@ export class SortfolioAPI {
       })),
     };
   }
+
+  /**
+   * Returns curated preset sample problems for fast 1-click demos and judge review.
+   * @returns {Promise<Array<Object>>}
+   */
+  async getPresetProblems() {
+    try {
+      const res = await fetch('/examples/preset_problems.json');
+      if (res.ok) {
+        return await res.json();
+      }
+    } catch {
+      // Fallback to embedded presets if fetch fails in offline or static file mode
+    }
+
+    return [
+      {
+        id: 'sample-flask-supported',
+        title: 'Flask: add_url_rule parameter verification',
+        badge: 'Supported Case',
+        badgeType: 'success',
+        repo: 'pallets/flask',
+        issueNumber: 5240,
+        claimText: 'add_url_rule accepts parameter provide_automatic_options',
+        claimType: 'parameter_existence',
+        targetFile: 'src/flask/app.py',
+        expectedStatus: 'supported',
+        description: 'Validates that Flask route function officially declares the automatic options argument.'
+      },
+      {
+        id: 'sample-flask-contradicted',
+        title: 'Flask: False claim about instance_path absence',
+        badge: 'Contradicted Case',
+        badgeType: 'danger',
+        repo: 'pallets/flask',
+        issueNumber: 4912,
+        claimText: 'Flask.__init__ has no parameter named instance_path',
+        claimType: 'parameter_existence',
+        targetFile: 'src/flask/app.py',
+        expectedStatus: 'contradicted',
+        description: 'Catches a false bug report claiming instance_path is missing when it is in the signature.'
+      },
+      {
+        id: 'sample-runtime-unverified',
+        title: 'Requests: Vague OS-specific runtime crash',
+        badge: 'Unverified Case',
+        badgeType: 'warning',
+        repo: 'psf/requests',
+        issueNumber: 6180,
+        claimText: 'Requests causes segfault in OpenSSL on custom embedded MIPS build',
+        claimType: 'runtime_behavior',
+        targetFile: 'requests/sessions.py',
+        expectedStatus: 'unverified',
+        description: 'Correctly flags runtime behavior as Unverified instead of guessing.'
+      }
+    ];
+  }
 }

@@ -397,7 +397,19 @@ export function deterministicExtractClaims(title: string, body: string): Extract
     });
   }
 
-  // 3. Look for function or class symbol calls in backticks: `Flask.add_url_rule`
+  // 3. Look for addition / introduction claims: e.g. "Add param X", "adds param X to func"
+  const addRegex = /(?:adds?|added|adding|supports?|introduces?)\s+(?:(?:parameter|argument|arg|keyword)\s+)?['"`]?([a-zA-Z0-9_]+)['"`]?(?:\s+(?:parameter|argument|arg|keyword))?/gi;
+  while ((match = addRegex.exec(combinedText)) !== null) {
+    if (match[1] && !['parameter', 'argument', 'arg', 'keyword', 'the', 'a', 'to', 'in'].includes(match[1].toLowerCase())) {
+      claims.push({
+        originalText: match[0],
+        claimType: 'parameter_existence',
+        targetSymbol: match[1],
+      });
+    }
+  }
+
+  // 4. Look for function or class symbol calls in backticks: `Flask.add_url_rule`
   const symbolRegex = /`([a-zA-Z0-9_]+(?:\.[a-zA-Z0-9_]+)+)`/g;
   while ((match = symbolRegex.exec(combinedText)) !== null) {
     const symbol = match[1];

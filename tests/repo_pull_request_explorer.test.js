@@ -47,6 +47,33 @@ function sortRepoItems(items, sortMode) {
   }
 }
 
+function getFallbackRepoItems(repo, type) {
+  const r = (repo || '').toLowerCase().trim();
+  if (type === 'pull') {
+    if (r === 'me-agrim-rehan/reachable-vulnerability') {
+      return [
+        { number: 19, title: 'feat: integrate OSV vulnerability advisories', state: 'closed', author: 'me-agrim-rehan' },
+        { number: 18, title: 'Improve AI agent evidence reliability', state: 'closed', author: 'stackyanurag' },
+        { number: 1, title: 'chore: establish project foundation and static structure', state: 'closed', author: 'me-agrim-rehan' }
+      ];
+    }
+    if (r === 'happy123-glitch/sortfolio') {
+      return [
+        { number: 17, title: 'Use Supabase Auth for accounts and profiles', state: 'merged', author: 'Happy123-glitch' },
+        { number: 16, title: 'Feat/GitHub official merge and docs', state: 'merged', author: 'Dhairya-Narang' },
+        { number: 1, title: 'Complete Sortfolio Backend & CI', state: 'merged', author: 'Dhairya-Narang' }
+      ];
+    }
+    if (r === 'pallets/flask') {
+      return [
+        { number: 5240, title: 'add_url_rule parameter verification', state: 'closed', author: 'davidism' }
+      ];
+    }
+    return [];
+  }
+  return [];
+}
+
 test('Repository Pull Request & Issue Explorer with Sorting', async (t) => {
   await t.test('parseGitHubInput: parses full pull request URLs', () => {
     const res = parseGitHubInput('https://github.com/me-agrim-rehan/reachable-vulnerability/pull/1');
@@ -119,6 +146,26 @@ test('Repository Pull Request & Issue Explorer with Sorting', async (t) => {
     // Title alphabetical
     const byTitle = sortRepoItems(mockPRs, 'title-asc');
     assert.deepEqual(byTitle.map((x) => x.number), [1, 15, 42]);
+  });
+
+  await t.test('getFallbackRepoItems: returns repository-specific PRs and avoids cross-repo dummy items', () => {
+    // 1. reachable-vulnerability returns its real PRs (19, 18, 1)
+    const vulnPRs = getFallbackRepoItems('me-agrim-rehan/reachable-vulnerability', 'pull');
+    assert.ok(vulnPRs.length >= 3);
+    assert.equal(vulnPRs[0].number, 19);
+    assert.ok(vulnPRs.some(p => p.number === 1));
+
+    // 2. SortFolio returns its own distinct PRs (17, 16, 1)
+    const sfPRs = getFallbackRepoItems('Happy123-glitch/SortFolio', 'pull');
+    assert.ok(sfPRs.length >= 3);
+    assert.equal(sfPRs[0].number, 17);
+
+    // 3. Changing repo changes items completely: numbers and titles do not collide
+    assert.notDeepEqual(vulnPRs.map(p => p.number), sfPRs.map(p => p.number));
+
+    // 4. Unknown repo returns empty array instead of polluting with other repo items
+    const unknownPRs = getFallbackRepoItems('some-unknown/repo', 'pull');
+    assert.deepEqual(unknownPRs, []);
   });
 
   await t.test('handleAnalyzePR: verifies PR #1 for reachable-vulnerability', async () => {

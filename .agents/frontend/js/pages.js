@@ -27,8 +27,11 @@
   /* ================= SETTINGS ================= */
   var settings = load("sf_settings", DEFAULTS);
   var draft = Object.assign({}, settings);
+  var demoProfile = load("sf_demo_profile", { name: "", email: "demo@sortfolio.local" });
+  var profileData = null;
+  var profileUsesDatabase = false;
 
-  function displayName() { return settings.name || sessionStorage.getItem("sf_name") || SF.modeLabel; }
+  function displayName() { return sessionStorage.getItem("sf_name") || settings.name || SF.modeLabel; }
   function applyAccent(key) {
     var a = ACCENTS[key] || ACCENTS.gold, r = document.documentElement.style;
     r.setProperty("--gold", a[0]); r.setProperty("--gold2", a[1]); r.setProperty("--gold-hi", a[2]); r.setProperty("--gold-lo", a[3]);
@@ -37,7 +40,8 @@
   function applySettings(initial) {
     applyAccent(settings.accent);
     document.body.classList.toggle("calm", !!settings.calm);
-    $("logoutBtn").textContent = displayName().split(/\s+/).map(function (w) { return w[0]; }).join("").slice(0, 2).toUpperCase();
+    $("avatarBtn").textContent = displayName().split(/\s+/).map(function (w) { return w[0]; }).join("").slice(0, 2).toUpperCase();
+    $("avatarBtn").title = "View profile (" + displayName() + ")";
     $("acName").textContent = displayName();
     $("acMode").textContent = SF.modeLabel;
     $("acStore").textContent = SF.demo ? "Sample data, resets on reload" : "This browser (localStorage)";
@@ -46,8 +50,187 @@
       var seg = document.querySelector('.seg-btn[data-type="' + settings.type + '"]'); if (seg) seg.click();
     }
   }
+  function clearProfilePassword() {
+    $("profileCurrentPassword").value = "";
+    $("profileNewPassword").value = "";
+    $("profileConfirmPassword").value = "";
+  }
+  function closeProfile() {
+    $("profileModal").hidden = true;
+    clearProfilePassword();
+  }
+  function initials(name) {
+    return String(name || "User").trim().split(/\s+/).map(function (word) { return word[0]; }).join("").slice(0, 2).toUpperCase();
+  }
+  function updateProfilePreview() {
+    var name = $("profileName").value.trim() || "Your name";
+    var email = $("profileEmail").value.trim() || "Your email";
+    $("profileAvatar").textContent = initials(name);
+    $("profileDisplayName").textContent = name;
+    $("profileDisplayEmail").textContent = email;
+  }
+  async function openProfile() {
+    var demo = SF.demo;
+    var editable = demo || SF.modeLabel === "User";
+    profileUsesDatabase = !!(window.SFBackend && window.SFBackend.isReady());
+    profileData = null;
+    $("profileName").disabled = true;
+    $("profileEmail").disabled = true;
+    $("profilePassword").disabled = true;
+    $("saveProfileBtn").hidden = true;
+    $("profileReadOnly").hidden = editable;
+    $("profileDemoNote").hidden = !demo;
+    $("profileBadge").textContent = demo ? (profileUsesDatabase ? "Demo account" : "Offline demo") : "Supabase account";
+    $("profileMode").textContent = demo ? (profileUsesDatabase ? "Demo · Database" : "Demo · This browser") : "User · Supabase";
+    $("profileCreated").textContent = "Loading…";
+    $("profileError").hidden = true;
+    $("profileError").textContent = "";
+    $("profileSaved").textContent = "";
+    clearProfilePassword();
+    $("profileModal").hidden = false;
+    $("closeProfileModalBtn").focus();
+
+    try {
+      if (profileUsesDatabase) {
+        var authUser = await window.SFBackend.getCurrentUser();
+        if (authUser.email) sessionStorage.setItem("sf_email", authUser.email);
+        profileData = await window.SFBackend.getProfile();
+      } else if (demo) {
+        profileData = {
+          full_name: demoProfile.name || sessionStorage.getItem("sf_name") || "Demo",
+          contact_email: demoProfile.email || "demo@sortfolio.local",
+          created_at: demoProfile.created || null
+        };
+      } else {
+        throw new Error("Supabase is unavailable. Your account profile could not be loaded.");
+      }
+
+      $("profileName").value = profileData.full_name || sessionStorage.getItem("sf_name") || (demo ? "Demo" : "");
+      $("profileEmail").value = profileData.contact_email || sessionStorage.getItem("sf_email") || "";
+      $("profileName").disabled = !editable;
+      $("profileEmail").disabled = !editable;
+      $("profilePassword").disabled = !editable || demo || !profileUsesDatabase;
+      $("profilePassword").hidden = demo || !editable || !profileUsesDatabase;
+      $("saveProfileBtn").hidden = !editable;
+      $("profileDemoNote").textContent = profileUsesDatabase
+        ? "Demo profile edits are saved to your Supabase account."
+        : "Demo profile edits are saved in this browser only; configure Supabase to sync them.";
+      var created = profileData.created_at;
+      $("profileCreated").textContent = created ? new Date(created).toLocaleDateString() : demo ? "Demo session" : "Not available";
+      updateProfilePreview();
+      if (editable) $("profileName").focus();
+    } catch (error) {
+      $("profileError").textContent = error.message || "Could not load your profile.";
+      $("profileError").hidden = false;
+    }
+  }
+  $("avatarBtn").addEventListener("click", openProfile);
+  $("closeProfileModalBtn").addEventListener("click", closeProfile);
+  $("cancelProfileBtn").addEventListener("click", closeProfile);
+  $("profileModal").addEventListener("click", function (e) {
+    if (e.target === $("profileModal")) closeProfile();
+  });
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape" && !$("profileModal").hidden) closeProfile();
+  });
+  $("profileName").addEventListener("input", updateProfilePreview);
+  $("profileEmail").addEventListener("input", updateProfilePreview);
+  $("profileForm").addEventListener("submit", async function (e) {
+    e.preventDefault();
+    var demo = SF.demo;
+    var editable = demo || SF.modeLabel === "User";
+    if (!editable || !profileData) return;
+
+    var name = $("profileName").value.trim();
+    var updatedEmail = $("profileEmail").value.trim().toLowerCase();
+    var currentPassword = $("profileCurrentPassword").value;
+    var newPassword = $("profileNewPassword").value;
+    var confirmPassword = $("profileConfirmPassword").value;
+    var error = "";
+    $("profileError").textContent = "";
+    if (name.length < 2) error = "Enter your full name.";
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(updatedEmail)) error = "Enter a valid email address.";
+
+    var changingPassword = !demo && !!(currentPassword || newPassword || confirmPassword);
+    if (!error && changingPassword) {
+      if (!currentPassword || !newPassword || !confirmPassword) error = "Fill in all password fields to change your password.";
+      else if (newPassword.length < 8) error = "Use a new password with at least 8 characters.";
+      else if (newPassword !== confirmPassword) error = "The new passwords do not match.";
+    }
+    if (error) {
+      $("profileError").textContent = error;
+      $("profileError").hidden = false;
+      $("profileSaved").textContent = "";
+      return;
+    }
+
+    var accountChanged = false;
+    var emailChangeRequested = false;
+    try {
+      if (profileUsesDatabase) {
+        if (changingPassword) {
+          await window.SFBackend.verifyPassword(currentPassword);
+        }
+        var changes = !demo ? { data: { full_name: name } } : {};
+        if (!demo && updatedEmail !== (sessionStorage.getItem("sf_email") || "")) {
+          changes.email = updatedEmail;
+          emailChangeRequested = true;
+        }
+        if (changingPassword) changes.password = newPassword;
+        if (Object.keys(changes).length) {
+          await window.SFBackend.updateAccount(changes);
+          accountChanged = true;
+        }
+        profileData = await window.SFBackend.saveProfile({ full_name: name, contact_email: updatedEmail });
+      } else if (demo) {
+        demoProfile = { name: name, email: updatedEmail, created: demoProfile.created || Date.now() };
+        if (!store("sf_demo_profile", demoProfile)) {
+          throw new Error("Could not save your profile. Allow browser storage and try again.");
+        }
+        profileData = {
+          full_name: demoProfile.name,
+          contact_email: demoProfile.email,
+          created_at: new Date(demoProfile.created).toISOString()
+        };
+      } else {
+        throw new Error("Supabase is unavailable. Your profile was not saved.");
+      }
+    } catch (saveError) {
+      $("profileError").textContent = accountChanged
+        ? "Your account details changed, but the profile could not be saved: " + (saveError.message || "Unknown error.")
+        : (saveError.message || "Could not save your profile.");
+      $("profileError").hidden = false;
+      $("profileSaved").textContent = "";
+      return;
+    }
+
+    sessionStorage.setItem("sf_name", name);
+    settings.name = name;
+    draft.name = name;
+    var settingsSaved = store("sf_settings", settings);
+    if (!settingsSaved) {
+      $("profileError").textContent = "Profile saved, but the display name preference could not be saved.";
+      $("profileError").hidden = false;
+    }
+    applySettings(false);
+    $("profileError").hidden = !$("profileError").textContent;
+    $("profileSaved").textContent = $("profileError").hidden
+      ? profileUsesDatabase
+        ? "Profile saved to Supabase." + (emailChangeRequested ? " Confirm your new email using the message Supabase sent." : "")
+        : "Profile saved in this browser only."
+      : "";
+    $("profileEmail").value = updatedEmail;
+    $("profileCreated").textContent = profileData.created_at
+      ? new Date(profileData.created_at).toLocaleDateString()
+      : demo ? "Demo session" : "Not available";
+    updateProfilePreview();
+    clearProfilePassword();
+    if ($("profileError").hidden) {
+      closeProfile();
+    }
+  });
   function fillSettings() {
-    $("setName").value = draft.name || sessionStorage.getItem("sf_name") || "";
+    $("setName").value = sessionStorage.getItem("sf_name") || draft.name || "";
     $("setType").value = draft.type; $("setRepo").value = draft.repo;
     $("setKeep").value = String(draft.keep); $("setCalm").checked = !!draft.calm;
     applyAccent(draft.accent);

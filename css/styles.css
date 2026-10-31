@@ -528,6 +528,33 @@ body.calm *{animation:none!important;transition:none!important}
 .repo-search-input:focus {
   border-color: var(--gold);
 }
+.repo-source-badge {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 12.5px;
+  margin-bottom: 12px;
+  animation: viewIn 0.25s var(--ease) both;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.repo-source-badge.official {
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  color: #34d399;
+}
+.repo-source-badge.fallback {
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  color: #fbbf24;
+}
+.repo-source-badge.warning {
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  color: #f87171;
+}
 .repo-items-list {
   list-style: none;
   padding: 0;

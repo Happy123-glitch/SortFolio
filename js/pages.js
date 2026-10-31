@@ -225,6 +225,9 @@
       : demo ? "Demo session" : "Not available";
     updateProfilePreview();
     clearProfilePassword();
+    if ($("profileError").hidden) {
+      closeProfile();
+    }
   });
   function fillSettings() {
     $("setName").value = sessionStorage.getItem("sf_name") || draft.name || "";

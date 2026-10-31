@@ -205,3 +205,80 @@ test("GitHub Merge: executeOfficialMerge throws descriptive error on merge confl
     /cannot be merged\. It may have unresolved merge conflicts/
   );
 });
+
+test("GitHub Merge: commitMergeAuditDocToRepo appends audit log entry to existing README.md", async () => {
+  let capturedPayload = null;
+  let getCalled = false;
+
+  const mockFetch = async (url, opts) => {
+    if (opts && opts.method === "PUT") {
+      capturedPayload = JSON.parse(opts.body);
+      return {
+        status: 200,
+        ok: true,
+        json: async () => ({
+          content: { html_url: "https://github.com/org/repo/blob/main/README.md" },
+          commit: { sha: "readme123sha" }
+        })
+      };
+    }
+    // GET README.md
+    getCalled = true;
+    const existingReadme = "# My Awesome Project\n\nWelcome to our repo.";
+    return {
+      status: 200,
+      ok: true,
+      json: async () => ({
+        sha: "oldreadme_sha_999",
+        content: Buffer.from(existingReadme).toString("base64")
+      })
+    };
+  };
+
+  const result = await SortfolioGitHubMerge.commitMergeAuditDocToRepo(
+    "org/repo",
+    55,
+    "",
+    "ghp_valid_token",
+    {
+      docOption: "readme",
+      branch: "main",
+      prItem: { number: 55, title: "fix: correct AST token parsing" },
+      customRationale: "Verified all claims against AST."
+    },
+    mockFetch
+  );
+
+  assert.equal(getCalled, true);
+  assert.equal(result.success, true);
+  assert.equal(result.path, "README.md");
+  assert.equal(capturedPayload.sha, "oldreadme_sha_999");
+  assert.ok(capturedPayload.message.includes("docs(readme): add SortFolio merge audit for PR #55"));
+
+  const decoded = Buffer.from(capturedPayload.content, "base64").toString("utf8");
+  assert.ok(decoded.includes("# My Awesome Project"));
+  assert.ok(decoded.includes("SortFolio Triage & Merge Log: PR #55 — fix: correct AST token parsing"));
+  assert.ok(decoded.includes("Verified all claims against AST."));
+});
+
+test("GitHub Merge: commitMergeAuditDocToRepo skips file commit when docOption is none", async () => {
+  let called = false;
+  const mockFetch = async () => {
+    called = true;
+    return { status: 200, ok: true };
+  };
+
+  const result = await SortfolioGitHubMerge.commitMergeAuditDocToRepo(
+    "org/repo",
+    99,
+    "# Some content",
+    "ghp_token",
+    { docOption: "none" },
+    mockFetch
+  );
+
+  assert.equal(called, false);
+  assert.equal(result.success, true);
+  assert.equal(result.skipped, true);
+  assert.equal(result.path, null);
+});

@@ -1835,17 +1835,44 @@
       { text: "PR introduces valid syntax adhering to repository contracts", status: "Supported", evidence: { path: "source" } }
     ];
 
+    function getSelectedDocOption() {
+      var selected = document.querySelector('input[name="mergeDocOption"]:checked');
+      return selected ? selected.value : "new";
+    }
+
     function refreshDocPreview() {
       if (!window.SortfolioGitHubMerge) return "";
       var rationale = $("mergeRationaleInput").value.trim() || defaultRationale;
-      var docMarkdown = window.SortfolioGitHubMerge.generateMergeAuditDoc(repo, prItem, diag, claims, {
-        customRationale: rationale,
-        mergedBy: "Repository Maintainer"
-      });
-      if ($("mergeDocPreviewText")) {
-        $("mergeDocPreviewText").textContent = docMarkdown;
+      var opt = getSelectedDocOption();
+
+      var previewText = "";
+      var summaryEl = $("mergeDocPreviewSummary");
+
+      if (opt === "new") {
+        if (summaryEl) summaryEl.textContent = "Preview Generated In-Repo Documentation (docs/triage/PR-" + prNumber + "-MERGE-AUDIT.md)";
+        previewText = window.SortfolioGitHubMerge.generateMergeAuditDoc(repo, prItem, diag, claims, {
+          customRationale: rationale,
+          mergedBy: "Repository Maintainer"
+        });
+      } else if (opt === "readme") {
+        if (summaryEl) summaryEl.textContent = "Preview Entry to Append to Existing README.md";
+        previewText = window.SortfolioGitHubMerge.generateReadmeAuditSnippet(prItem, diag, claims, {
+          customRationale: rationale
+        });
+      } else if (opt === "existing_doc") {
+        if (summaryEl) summaryEl.textContent = "Preview Entry to Append to docs/TRIAGE_AUDIT.md";
+        previewText = window.SortfolioGitHubMerge.generateReadmeAuditSnippet(prItem, diag, claims, {
+          customRationale: rationale
+        });
+      } else {
+        if (summaryEl) summaryEl.textContent = "Repository Documentation: Skipped";
+        previewText = "# Skipped\nNo documentation file will be created or modified in the repository.";
       }
-      return docMarkdown;
+
+      if ($("mergeDocPreviewText")) {
+        $("mergeDocPreviewText").textContent = previewText;
+      }
+      return previewText;
     }
 
     refreshDocPreview();
@@ -1853,6 +1880,12 @@
     $("mergeRationaleInput").oninput = function () {
       refreshDocPreview();
     };
+
+    document.querySelectorAll('input[name="mergeDocOption"]').forEach(function (r) {
+      r.onchange = function () {
+        refreshDocPreview();
+      };
+    });
 
     currentMergePayload = {
       repo: repo,
@@ -2005,11 +2038,12 @@
 
       var method = $("mergeMethodSelect") ? $("mergeMethodSelect").value : "squash";
       var rationale = $("mergeRationaleInput") ? $("mergeRationaleInput").value.trim() : "";
-      var createDocs = $("mergeCommitDocCheckbox") ? $("mergeCommitDocCheckbox").checked : true;
+      var docOptionRadio = document.querySelector('input[name="mergeDocOption"]:checked');
+      var docOption = docOptionRadio ? docOptionRadio.value : "new";
       var postComment = $("mergePostCommentCheckbox") ? $("mergePostCommentCheckbox").checked : true;
 
       var docContent = "";
-      if (window.SortfolioGitHubMerge) {
+      if (window.SortfolioGitHubMerge && docOption !== "none") {
         docContent = window.SortfolioGitHubMerge.generateMergeAuditDoc(
           repo,
           currentMergePayload.prItem,
@@ -2036,17 +2070,24 @@
             mergeMethod: method,
             commitTitle: commitMsgObj.commitTitle,
             commitMessage: commitMsgObj.commitMessage,
-            createDocs: createDocs,
+            docOption: docOption,
             docContent: docContent,
             postComment: postComment,
             customRationale: rationale
           });
         }
 
+        var docNotice = "";
+        if (mergeResult && mergeResult.docUrl) {
+          docNotice = '<br><a href="' + mergeResult.docUrl + '" target="_blank" rel="noopener" style="color:var(--gold);font-size:11.5px;text-decoration:underline;">📄 View In-Repo Documentation (' + mergeResult.docPath + ') ↗</a>';
+        } else if (docOption === "none") {
+          docNotice = '<br><span style="font-size:11.5px;color:var(--muted);">ℹ️ Repository file documentation skipped per user selection.</span>';
+        }
+
         feedback.innerHTML = '<div style="background:rgba(16,185,129,0.15);border:1px solid rgba(16,185,129,0.4);border-radius:8px;padding:12px;color:#34d399;font-weight:600;">' +
           '🎉 <strong>Pull Request #' + prNumber + ' Successfully Merged in Official GitHub!</strong><br>' +
           '<span style="font-size:11px;font-weight:normal;color:#cbd5e1;">Merge SHA: ' + (mergeResult.sha || 'Committed') + '</span>' +
-          (mergeResult.docUrl ? '<br><a href="' + mergeResult.docUrl + '" target="_blank" rel="noopener" style="color:var(--gold);font-size:11.5px;text-decoration:underline;">📄 View In-Repo Merge Audit Doc (' + mergeResult.docPath + ') ↗</a>' : '') +
+          docNotice +
           '</div>';
 
         // Update item in inspectorState and DOM

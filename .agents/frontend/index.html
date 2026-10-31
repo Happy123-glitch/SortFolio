@@ -20,7 +20,8 @@
   <div class="user">
     <button type="button" class="btn-ghost sm" id="navGhTokenBtn" title="GitHub API Key Settings" style="display:flex;align-items:center;gap:6px;padding:4px 10px;font-size:12px;border:1px solid rgba(255,255,255,0.15);border-radius:14px;cursor:pointer;"><span id="navGhTokenDot" style="color:var(--gold);">🔑</span> <span id="navGhTokenLabel">GitHub Key</span></button>
     <span class="mode-pill" id="modePill">Admin</span>
-    <button class="avatar" id="logoutBtn" title="Log out">AD</button>
+    <button class="avatar" id="avatarBtn" type="button" title="View profile" aria-label="View profile">AD</button>
+    <button class="btn-ghost logout-btn" id="logoutBtn" type="button">Log out</button>
   </div>
 </header>
 
@@ -156,6 +157,17 @@
         <div class="tabpane" id="tab-compare">
           <div class="compare-panel">
             <p class="muted small">Paste the original and changed code below. Sortfolio will show an aligned diff; pasted code is compared locally and is not uploaded.</p>
+            <p class="muted small">Paste code in Before, choose a language, then generate a corrected copy in After. The original stays unchanged. Suggestions cover a few common patterns only; they are not a full code review.</p>
+            <div class="compare-autocorrect-toolbar">
+              <label class="fix-language">Language
+                <select class="select in" id="compareLanguage" aria-label="Code language">
+                  <option value="javascript">JavaScript</option>
+                  <option value="typescript">TypeScript</option>
+                  <option value="other">Other language</option>
+                </select>
+              </label>
+              <button class="btn-gold" id="compareAutoCorrectBtn" type="button">Auto-correct → After</button>
+            </div>
             <div class="compare-editor-grid">
               <label class="compare-field">Before
                 <textarea id="compareOriginalInput" class="compare-textarea" spellcheck="false" placeholder="Paste original code here"></textarea>
@@ -175,6 +187,16 @@
               <h4>Change summary</h4>
               <p class="muted small" id="compareSummary">Paste both versions and render the diff to see a summary.</p>
             </div>
+            <section class="fix-suggestions" id="compareSuggestions" aria-labelledby="compareSuggestionsTitle" hidden>
+              <div class="fix-suggestions-head">
+                <div>
+                  <h4 id="compareSuggestionsTitle">Possible fixes</h4>
+                  <p class="muted small">Review possible fixes and preview each one before applying it.</p>
+                </div>
+              </div>
+              <ul class="fix-suggestion-list" id="compareSuggestionList"></ul>
+              <p class="muted small" id="compareSuggestionsEmpty" hidden></p>
+            </section>
           </div>
         </div>
         <div class="tabpane" id="tab-summary">
@@ -315,7 +337,7 @@
     </form>
     <div class="panel" id="ghTokenSettingsPanel">
       <h3>🔑 GitHub Official Integration &amp; API Key</h3>
-      <p class="muted small">Required to perform official merges and commit triage audit documentation directly to your repositories.</p>
+      <p class="muted small"><strong>Optional for Browsing &amp; Triage</strong>: You only need to add your GitHub Personal Access Token if you wish to use the official <strong>Merge PR</strong> feature and commit merge documentation directly to your repository. Standard repository browsing, PR inspection, and AST claim verification work 100% free without any token.</p>
       <div class="form-grid" style="margin-top:10px;">
         <label class="wide">GitHub Personal Access Token (classic with <code>repo</code> scope)
           <div style="display:flex; gap:8px;">
@@ -524,7 +546,6 @@
     <button type="submit" class="chat-send-btn" id="chatSendBtn">Send</button>
   </form>
 </div>
-
 <!-- Add Repository Modal -->
 <div class="portfolio-modal-backdrop" id="addRepoModal" hidden>
   <div class="portfolio-modal">
@@ -547,6 +568,56 @@
   </div>
 </div>
 
+<div class="portfolio-modal-backdrop" id="profileModal" hidden>
+  <section class="portfolio-modal profile-modal" role="dialog" aria-modal="true" aria-labelledby="profileTitle">
+    <div class="portfolio-modal-head">
+      <div>
+        <p class="profile-eyebrow">ACCOUNT</p>
+        <h3 id="profileTitle">Your profile</h3>
+      </div>
+      <button type="button" class="btn-ghost sm" id="closeProfileModalBtn" aria-label="Close profile">✕</button>
+    </div>
+    <div class="profile-banner">
+      <div class="profile-avatar" id="profileAvatar">U</div>
+      <div class="profile-identity">
+        <h4 id="profileDisplayName">Your name</h4>
+        <p id="profileDisplayEmail">Your email</p>
+      </div>
+      <span class="profile-badge" id="profileBadge">Local account</span>
+    </div>
+    <form id="profileForm" novalidate>
+      <div class="profile-section-title">
+        <div><h4>Personal details</h4><p class="muted small">Keep your account information up to date.</p></div>
+        <span class="profile-edit-hint">✎ Editable</span>
+      </div>
+      <div class="profile-fields">
+        <label>Full name<input class="in" id="profileName" type="text" maxlength="80" autocomplete="name" required></label>
+        <label>Email<input class="in" id="profileEmail" type="email" maxlength="254" autocomplete="email" required></label>
+      </div>
+      <div class="profile-meta">
+        <div class="profile-meta-card"><span>Account type</span><strong id="profileMode"></strong></div>
+        <div class="profile-meta-card"><span>Member since</span><strong id="profileCreated"></strong></div>
+      </div>
+      <p class="profile-readonly" id="profileReadOnly" hidden>This session is read-only. Sign in with a registered account to edit profile details.</p>
+      <p class="profile-demo-note" id="profileDemoNote" hidden>Demo profile edits are saved in this browser only.</p>
+      <fieldset class="profile-password" id="profilePassword">
+        <legend>Security <span class="muted small">(optional)</span></legend>
+        <p class="muted small profile-password-help">Change password for your account.</p>
+        <div class="profile-fields">
+          <label>Current password<input class="in" id="profileCurrentPassword" type="password" autocomplete="current-password"></label>
+          <label>New password<input class="in" id="profileNewPassword" type="password" minlength="8" autocomplete="new-password"></label>
+          <label class="wide">Confirm new password<input class="in" id="profileConfirmPassword" type="password" autocomplete="new-password"></label>
+        </div>
+      </fieldset>
+      <p class="form-error" id="profileError" role="alert" hidden></p>
+      <p class="saved profile-saved" id="profileSaved" role="status"></p>
+      <div class="profile-actions">
+        <button type="button" class="btn-ghost auto" id="cancelProfileBtn">Cancel</button>
+        <button type="submit" class="btn-gold" id="saveProfileBtn">Save changes</button>
+      </div>
+    </form>
+  </section>
+</div>
 <!-- AI Diagnostic & Error Solution Modal -->
 <div class="portfolio-modal-backdrop" id="aiDiagnosticModal" hidden>
   <div class="portfolio-modal diagnostic-modal">
@@ -610,8 +681,11 @@
     </div>
     <div class="portfolio-modal-body" style="padding:16px 20px;">
       <p class="muted small" style="margin-bottom:12px;">
-        To merge pull requests into official GitHub repositories and commit audit documentation files (<code>docs/triage/</code>), SortFolio requires a GitHub Personal Access Token with <strong>repo</strong> write permissions.
+        To merge pull requests into official GitHub repositories and commit audit documentation files (<code>docs/triage/</code> or <code>README.md</code>), SortFolio requires a GitHub Personal Access Token with <strong>repo</strong> write permissions.
       </p>
+      <div style="background:rgba(59,130,246,0.12); border:1px solid rgba(59,130,246,0.3); padding:10px 14px; border-radius:8px; font-size:12px; margin-bottom:12px; color:#93c5fd;">
+        ℹ️ <strong>Note</strong>: You only need to add your GitHub Personal Access Token if you want to execute the <strong>Merge PR</strong> feature and commit merge documentation to your repository. Browsing repositories, inspecting PRs, and running AST triage are 100% free and do not require any token!
+      </div>
       <div style="background:rgba(217,119,6,0.1); border:1px solid rgba(217,119,6,0.3); padding:10px 14px; border-radius:8px; font-size:12px; margin-bottom:16px; color:#fbbf24;">
         🔒 <strong>Client-Side Security</strong>: Your token is stored only in your local browser storage and is sent directly to GitHub's official API. It is never logged or stored on any server.
       </div>
@@ -659,22 +733,54 @@
         </label>
       </div>
 
-      <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.1); border-radius:8px; padding:12px 14px; margin:14px 0;">
-        <label class="check-row" style="margin-bottom:8px; font-weight:600; color:var(--text); cursor:pointer;">
-          <input type="checkbox" id="mergeCommitDocCheckbox" checked>
-          Add Changes Made in Docs to That Repo (<code>docs/triage/PR-*-MERGE-AUDIT.md</code>)
-        </label>
-        <p class="muted small" style="margin-left:24px; margin-bottom:10px;">
-          Automatically saves full triage evidence, AST proof, and why-merged justification as a permanent documentation record in the repository.
+      <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.1); border-radius:8px; padding:14px; margin:14px 0;">
+        <div style="font-weight:600; margin-bottom:8px; color:var(--gold); display:flex; align-items:center; gap:6px;">
+          <span>📄</span> In-Repository Documentation &amp; Audit Log
+        </div>
+        <p class="muted small" style="margin-bottom:12px;">
+          Choose how you want to document why this PR was merged in the target repository:
         </p>
-        <label class="check-row" style="font-weight:600; color:var(--text); cursor:pointer;">
-          <input type="checkbox" id="mergePostCommentCheckbox" checked>
-          Post official SortFolio triage comment on GitHub PR conversation thread
-        </label>
+        <div style="display:flex; flex-direction:column; gap:10px;">
+          <label style="display:flex; align-items:flex-start; gap:8px; cursor:pointer;">
+            <input type="radio" name="mergeDocOption" value="new" checked style="margin-top:3px;">
+            <div>
+              <strong style="color:var(--text); font-size:12.5px;">🆕 Create New Dedicated File (<code>docs/triage/PR-*-MERGE-AUDIT.md</code>)</strong>
+              <div class="muted small">Generates full audit report with AST proofs, claim table, and why-merged justification.</div>
+            </div>
+          </label>
+          <label style="display:flex; align-items:flex-start; gap:8px; cursor:pointer;">
+            <input type="radio" name="mergeDocOption" value="readme" style="margin-top:3px;">
+            <div>
+              <strong style="color:var(--text); font-size:12.5px;">📖 Add to Existing README.md</strong>
+              <div class="muted small">Appends a clean SortFolio Triage &amp; Merge Log entry directly to the bottom of the repository's existing README.md.</div>
+            </div>
+          </label>
+          <label style="display:flex; align-items:flex-start; gap:8px; cursor:pointer;">
+            <input type="radio" name="mergeDocOption" value="existing_doc" style="margin-top:3px;">
+            <div>
+              <strong style="color:var(--text); font-size:12.5px;">📁 Append to Existing Docs File (<code>docs/TRIAGE_AUDIT.md</code>)</strong>
+              <div class="muted small">Maintains a running changelog of all merged PRs in a central audit file.</div>
+            </div>
+          </label>
+          <label style="display:flex; align-items:flex-start; gap:8px; cursor:pointer;">
+            <input type="radio" name="mergeDocOption" value="none" style="margin-top:3px;">
+            <div>
+              <strong style="color:var(--text); font-size:12.5px;">🚫 No Need (Skip Repository Documentation)</strong>
+              <div class="muted small">Merges the pull request without modifying or creating any documentation files in the repo.</div>
+            </div>
+          </label>
+        </div>
+
+        <div style="margin-top:14px; padding-top:10px; border-top:1px solid rgba(255,255,255,0.08);">
+          <label class="check-row" style="font-weight:600; color:var(--text); cursor:pointer;">
+            <input type="checkbox" id="mergePostCommentCheckbox" checked>
+            Post official SortFolio triage comment on GitHub PR conversation thread
+          </label>
+        </div>
       </div>
 
       <details style="margin-bottom:14px; background:rgba(0,0,0,0.2); border-radius:6px; padding:8px 12px;" id="mergeDocDetails">
-        <summary style="cursor:pointer; font-size:12px; color:var(--gold); font-weight:600;">Preview Generated In-Repo Documentation (Markdown)</summary>
+        <summary style="cursor:pointer; font-size:12px; color:var(--gold); font-weight:600;" id="mergeDocPreviewSummary">Preview Generated In-Repo Documentation (Markdown)</summary>
         <pre id="mergeDocPreviewText" style="font-size:11px; max-height:160px; overflow-y:auto; margin-top:8px; white-space:pre-wrap; color:#cbd5e1;"></pre>
       </details>
 
@@ -700,6 +806,7 @@
 <script src="js/api.js"></script>
 <script src="js/code-diff.js"></script>
 <script src="js/feedback.js"></script>
+<script src="js/users.js"></script>
 <script src="js/ai-diagnostic.js"></script>
 <script src="js/github-merge.js"></script>
 <script src="js/app.js"></script>

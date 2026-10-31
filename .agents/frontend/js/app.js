@@ -26,8 +26,8 @@
   var userName = sessionStorage.getItem("sf_name") || "";
   var modeLabel = { demo: "Demo", admin: "Admin", user: "User" }[mode] || "User";
   $("modePill").textContent = modeLabel;
-  $("logoutBtn").textContent = (userName || modeLabel).split(/\s+/).map(function (w) { return w[0]; }).join("").slice(0, 2).toUpperCase();
-  $("logoutBtn").title = "Log out" + (userName ? " (" + userName + ")" : "");
+  $("avatarBtn").textContent = (userName || modeLabel).split(/\s+/).map(function (w) { return w[0]; }).join("").slice(0, 2).toUpperCase();
+  $("avatarBtn").title = "View profile" + (userName ? " (" + userName + ")" : "");
 
   function setView(name) {
     $$(".view").forEach(function (v) { v.classList.toggle("active", v.id === "view-" + name); });
@@ -47,6 +47,8 @@
   $$("[data-goto]").forEach(function (b) { b.addEventListener("click", function () { setView(b.dataset.goto); }); });
   $("logoutBtn").addEventListener("click", function () {
     sessionStorage.removeItem("sf_mode");
+    sessionStorage.removeItem("sf_name");
+    sessionStorage.removeItem("sf_email");
     document.body.classList.add("leaving");
     setTimeout(function () { location.href = "login.html"; }, 300);
   });
@@ -145,12 +147,89 @@
   /* ---------- local code comparison ---------- */
   var currentPatch = "";
 
+  function clearFixSuggestions() {
+    fill($("compareSuggestionList"), []);
+    $("compareSuggestions").hidden = true;
+    $("compareSuggestionsEmpty").hidden = true;
+  }
+
   function clearCompareOutput(message) {
     fill($("compareDiff"), []);
     $("compareSummary").textContent = message;
     $("compareCopyBtn").disabled = true;
     $("compareDownloadBtn").disabled = true;
     currentPatch = "";
+    clearFixSuggestions();
+  }
+
+  function renderFixSuggestions(rows, afterText) {
+    var language = $("compareLanguage").value;
+    var suggestions = window.SortfolioDiff.suggestFixes(rows, language);
+    $("compareSuggestions").hidden = false;
+    $("compareSuggestionsEmpty").hidden = suggestions.length > 0;
+    if (!suggestions.length) {
+      $("compareSuggestionsEmpty").textContent = language === "other"
+        ? "Quick fix suggestions are currently available only for JavaScript and TypeScript."
+        : "No supported common issues were found on the added lines.";
+    }
+    fill($("compareSuggestionList"), suggestions.map(function (suggestion) {
+      var item = document.createElement("li");
+      item.className = "fix-suggestion";
+      var details = document.createElement("div");
+      var title = document.createElement("strong");
+      title.textContent = suggestion.title;
+      var reason = document.createElement("p");
+      reason.className = "muted small";
+      reason.textContent = suggestion.reason;
+      var line = document.createElement("small");
+      line.className = "fix-suggestion-line";
+      line.textContent = "Added line " + suggestion.lineNo;
+      var button = document.createElement("button");
+      button.className = "btn-outline sm";
+      button.type = "button";
+      button.textContent = "Preview fix";
+      var preview = document.createElement("div");
+      preview.className = "fix-inline-preview";
+      preview.hidden = true;
+      var previewText = document.createElement("p");
+      previewText.className = "muted small";
+      previewText.textContent = suggestion.reason;
+      var previewLine = document.createElement("pre");
+      previewLine.className = "fix-inline-code";
+      previewLine.textContent = suggestion.after || "(line removed)";
+      var applyButton = document.createElement("button");
+      applyButton.className = "btn-gold sm";
+      applyButton.type = "button";
+      applyButton.textContent = "Apply to After";
+      applyButton.hidden = true;
+      button.addEventListener("click", function () {
+        preview.hidden = false;
+        applyButton.hidden = false;
+        $("compareFeedback").textContent = "";
+      });
+      applyButton.addEventListener("click", function () {
+        var output = window.SortfolioDiff.applySuggestion($("compareUpdatedInput").value, suggestion);
+        if (output === null) {
+          $("compareFeedback").textContent = "This suggestion no longer matches the After code. Render the diff again.";
+          return;
+        }
+        $("compareUpdatedInput").value = output;
+        renderCompareDiff();
+        $("compareFeedback").textContent = "Fix applied. The corrected code is in After.";
+        $("compareUpdatedInput").scrollIntoView({ behavior: "smooth", block: "center" });
+        $("compareUpdatedInput").focus({ preventScroll: true });
+      });
+      preview.appendChild(previewText);
+      preview.appendChild(previewLine);
+      preview.appendChild(applyButton);
+      details.appendChild(title);
+      details.appendChild(reason);
+      details.appendChild(line);
+      details.appendChild(preview);
+      item.appendChild(details);
+      item.appendChild(button);
+      return item;
+    }));
   }
 
   function renderCompareDiff() {
@@ -163,6 +242,7 @@
     }
 
     var diff = window.SortfolioDiff.buildDiff(beforeText, afterText);
+    clearFixSuggestions();
     fill($("compareDiff"), diff.rows.map(function (line) {
       var row = document.createElement("div");
       row.className = "diff-line diff-" + line.type;
@@ -206,6 +286,7 @@
     if (diff.simplified) summary += " Large input: showing a full replacement to keep comparison responsive.";
     $("compareSummary").textContent = summary;
     currentPatch = window.SortfolioDiff.createPatch(beforeText, afterText);
+    renderFixSuggestions(diff.rows, afterText);
     $("compareCopyBtn").disabled = false;
     $("compareDownloadBtn").disabled = false;
     $("compareFeedback").textContent = "";
@@ -217,6 +298,24 @@
   }
 
   $("compareRenderBtn").addEventListener("click", renderCompareDiff);
+  $("compareAutoCorrectBtn").addEventListener("click", function () {
+    var beforeText = $("compareOriginalInput").value;
+    if (!beforeText.trim()) {
+      $("compareFeedback").textContent = "Paste code in Before first.";
+      $("compareOriginalInput").focus();
+      return;
+    }
+
+    var result = window.SortfolioDiff.generateCorrections(beforeText, $("compareLanguage").value);
+    $("compareUpdatedInput").value = result.text;
+    renderCompareDiff();
+    $("compareFeedback").textContent = result.applied
+      ? "Generated an After copy with " + result.applied + " supported fix" + (result.applied === 1 ? "" : "es") + ". Before is unchanged."
+      : "No supported fixes found; copied Before unchanged to After.";
+    $("compareUpdatedInput").scrollIntoView({ behavior: "smooth", block: "center" });
+    $("compareUpdatedInput").focus({ preventScroll: true });
+  });
+  $("compareLanguage").addEventListener("change", renderCompareDiff);
   $("compareOriginalInput").addEventListener("input", invalidateCompareOutput);
   $("compareUpdatedInput").addEventListener("input", invalidateCompareOutput);
   $("compareCopyBtn").addEventListener("click", async function () {
@@ -1736,17 +1835,44 @@
       { text: "PR introduces valid syntax adhering to repository contracts", status: "Supported", evidence: { path: "source" } }
     ];
 
+    function getSelectedDocOption() {
+      var selected = document.querySelector('input[name="mergeDocOption"]:checked');
+      return selected ? selected.value : "new";
+    }
+
     function refreshDocPreview() {
       if (!window.SortfolioGitHubMerge) return "";
       var rationale = $("mergeRationaleInput").value.trim() || defaultRationale;
-      var docMarkdown = window.SortfolioGitHubMerge.generateMergeAuditDoc(repo, prItem, diag, claims, {
-        customRationale: rationale,
-        mergedBy: "Repository Maintainer"
-      });
-      if ($("mergeDocPreviewText")) {
-        $("mergeDocPreviewText").textContent = docMarkdown;
+      var opt = getSelectedDocOption();
+
+      var previewText = "";
+      var summaryEl = $("mergeDocPreviewSummary");
+
+      if (opt === "new") {
+        if (summaryEl) summaryEl.textContent = "Preview Generated In-Repo Documentation (docs/triage/PR-" + prNumber + "-MERGE-AUDIT.md)";
+        previewText = window.SortfolioGitHubMerge.generateMergeAuditDoc(repo, prItem, diag, claims, {
+          customRationale: rationale,
+          mergedBy: "Repository Maintainer"
+        });
+      } else if (opt === "readme") {
+        if (summaryEl) summaryEl.textContent = "Preview Entry to Append to Existing README.md";
+        previewText = window.SortfolioGitHubMerge.generateReadmeAuditSnippet(prItem, diag, claims, {
+          customRationale: rationale
+        });
+      } else if (opt === "existing_doc") {
+        if (summaryEl) summaryEl.textContent = "Preview Entry to Append to docs/TRIAGE_AUDIT.md";
+        previewText = window.SortfolioGitHubMerge.generateReadmeAuditSnippet(prItem, diag, claims, {
+          customRationale: rationale
+        });
+      } else {
+        if (summaryEl) summaryEl.textContent = "Repository Documentation: Skipped";
+        previewText = "# Skipped\nNo documentation file will be created or modified in the repository.";
       }
-      return docMarkdown;
+
+      if ($("mergeDocPreviewText")) {
+        $("mergeDocPreviewText").textContent = previewText;
+      }
+      return previewText;
     }
 
     refreshDocPreview();
@@ -1754,6 +1880,12 @@
     $("mergeRationaleInput").oninput = function () {
       refreshDocPreview();
     };
+
+    document.querySelectorAll('input[name="mergeDocOption"]').forEach(function (r) {
+      r.onchange = function () {
+        refreshDocPreview();
+      };
+    });
 
     currentMergePayload = {
       repo: repo,
@@ -1906,11 +2038,12 @@
 
       var method = $("mergeMethodSelect") ? $("mergeMethodSelect").value : "squash";
       var rationale = $("mergeRationaleInput") ? $("mergeRationaleInput").value.trim() : "";
-      var createDocs = $("mergeCommitDocCheckbox") ? $("mergeCommitDocCheckbox").checked : true;
+      var docOptionRadio = document.querySelector('input[name="mergeDocOption"]:checked');
+      var docOption = docOptionRadio ? docOptionRadio.value : "new";
       var postComment = $("mergePostCommentCheckbox") ? $("mergePostCommentCheckbox").checked : true;
 
       var docContent = "";
-      if (window.SortfolioGitHubMerge) {
+      if (window.SortfolioGitHubMerge && docOption !== "none") {
         docContent = window.SortfolioGitHubMerge.generateMergeAuditDoc(
           repo,
           currentMergePayload.prItem,
@@ -1937,17 +2070,24 @@
             mergeMethod: method,
             commitTitle: commitMsgObj.commitTitle,
             commitMessage: commitMsgObj.commitMessage,
-            createDocs: createDocs,
+            docOption: docOption,
             docContent: docContent,
             postComment: postComment,
             customRationale: rationale
           });
         }
 
+        var docNotice = "";
+        if (mergeResult && mergeResult.docUrl) {
+          docNotice = '<br><a href="' + mergeResult.docUrl + '" target="_blank" rel="noopener" style="color:var(--gold);font-size:11.5px;text-decoration:underline;">📄 View In-Repo Documentation (' + mergeResult.docPath + ') ↗</a>';
+        } else if (docOption === "none") {
+          docNotice = '<br><span style="font-size:11.5px;color:var(--muted);">ℹ️ Repository file documentation skipped per user selection.</span>';
+        }
+
         feedback.innerHTML = '<div style="background:rgba(16,185,129,0.15);border:1px solid rgba(16,185,129,0.4);border-radius:8px;padding:12px;color:#34d399;font-weight:600;">' +
           '🎉 <strong>Pull Request #' + prNumber + ' Successfully Merged in Official GitHub!</strong><br>' +
           '<span style="font-size:11px;font-weight:normal;color:#cbd5e1;">Merge SHA: ' + (mergeResult.sha || 'Committed') + '</span>' +
-          (mergeResult.docUrl ? '<br><a href="' + mergeResult.docUrl + '" target="_blank" rel="noopener" style="color:var(--gold);font-size:11.5px;text-decoration:underline;">📄 View In-Repo Merge Audit Doc (' + mergeResult.docPath + ') ↗</a>' : '') +
+          docNotice +
           '</div>';
 
         // Update item in inspectorState and DOM

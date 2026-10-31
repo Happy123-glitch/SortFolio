@@ -173,6 +173,9 @@
     $("profileCreated").textContent = new Date(demo ? demoProfile.created : account.created).toLocaleDateString();
     updateProfilePreview();
     clearProfilePassword();
+    if ($("profileError").hidden) {
+      closeProfile();
+    }
   });
   function fillSettings() {
     $("setName").value = draft.name || sessionStorage.getItem("sf_name") || "";

@@ -11,6 +11,7 @@
   <div class="brand"><span class="logo">S</span><span>Sortfolio</span></div>
   <nav class="nav" id="nav">
     <button class="nav-btn active" data-view="home">🏠 Home</button>
+    <button class="nav-btn" data-view="repos">⑂ Repos &amp; PRs</button>
     <button class="nav-btn" data-view="history">🕘 History</button>
     <button class="nav-btn" data-view="settings">⚙️ Settings</button>
     <button class="nav-btn" data-view="about">ⓘ About</button>
@@ -203,6 +204,69 @@
   <div class="bottom">
     <div class="panel next"><span class="bulb">💡</span><div class="grow"><h3>What's Next?</h3><p class="muted">Add more context or check related issues for deeper insights.</p></div><button class="btn-outline" id="relatedBtn" type="button">Check Related Issues →</button></div>
     <div class="panel help"><span class="bulb">💬</span><div class="grow"><h4>Need Help or Have Ideas?</h4><button class="link" data-goto="about">Read how it works →</button></div><button class="btn-outline sm" type="button" id="openFeedbackQuickBtn" style="margin-left:auto;">Give Feedback →</button><span class="bot">🤖</span></div>
+  </div>
+</section>
+
+<!-- REPOSITORIES & PULL REQUESTS HUB -->
+<section class="view" id="view-repos">
+  <div class="page-panel" style="max-width: 1050px; margin: 24px auto;">
+    <div class="repos-view-head">
+      <div>
+        <h2 style="color:var(--gold); font-size:22px; display:flex; align-items:center; gap:8px;">
+          <span>⑂</span> Tracked Repositories &amp; Pull Requests Explorer
+        </h2>
+        <p class="muted small" style="margin-top:4px;">
+          View all repositories in your portfolio with Pull Request numbers, triage completion status, and AI-generated code diagnostics with actionable error solutions.
+        </p>
+      </div>
+      <div style="display:flex; gap:10px; align-items:center;">
+        <button type="button" class="btn-gold sm" onclick="if(window.SF_openAddRepoModal) window.SF_openAddRepoModal();">➕ Add Repo</button>
+      </div>
+    </div>
+
+    <!-- Shelf of All Repositories -->
+    <div class="repos-portfolio-shelf" id="reposPortfolioShelf">
+      <!-- Dynamically populated with repo cards showing PR count, completion badge, status -->
+    </div>
+
+    <!-- Active Repository Pull Requests Inspector -->
+    <div class="panel repos-pr-inspector" id="reposPRInspector">
+      <div class="inspector-head">
+        <div>
+          <h3 id="inspectorRepoTitle">⑂ Pull Requests</h3>
+          <p class="muted small" id="inspectorRepoSubtitle">Select any pull request to inspect AI details, detected errors, and executable code fixes.</p>
+        </div>
+        <div class="inspector-actions">
+          <button type="button" class="btn-outline sm" id="inspectorRefreshBtn">🔄 Refresh</button>
+        </div>
+      </div>
+
+      <div class="repo-explorer-controls">
+        <div class="repo-explorer-filter" id="inspectorFilter">
+          <button type="button" class="repo-filter-btn active" data-filter="all">All (<span id="insCountAll">0</span>)</button>
+          <button type="button" class="repo-filter-btn" data-filter="open">Open (<span id="insCountOpen">0</span>)</button>
+          <button type="button" class="repo-filter-btn" data-filter="closed">Closed / Merged (<span id="insCountClosed">0</span>)</button>
+        </div>
+        <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted);">
+          Sort:
+          <select class="repo-sort-select" id="inspectorSortSelect" aria-label="Sort Pull Requests">
+            <option value="number-desc">Number: Newest first (↓)</option>
+            <option value="number-asc">Number: Oldest first (↑)</option>
+            <option value="date-desc">Updated: Most recent</option>
+            <option value="state-open">State: Open first</option>
+            <option value="title-asc">Title: A–Z</option>
+          </select>
+        </label>
+        <input type="search" class="repo-search-input" id="inspectorSearchInput" placeholder="Filter pull requests by title, author, #…" aria-label="Filter pull requests">
+      </div>
+
+      <div id="inspectorLoading" class="loading" style="min-height:120px;" hidden>
+        <div class="spinner" style="width:32px;height:32px;"></div>
+        <p class="muted small">Fetching pull requests from GitHub repository…</p>
+      </div>
+
+      <ul class="repo-items-list" id="inspectorPRList"></ul>
+    </div>
   </div>
 </section>
 
@@ -464,6 +528,56 @@
   </div>
 </div>
 
+<!-- AI Diagnostic & Error Solution Modal -->
+<div class="portfolio-modal-backdrop" id="aiDiagnosticModal" hidden>
+  <div class="portfolio-modal diagnostic-modal">
+    <div class="portfolio-modal-head">
+      <div style="display:flex; align-items:center; gap:8px;">
+        <span style="font-size:20px;">🤖</span>
+        <div>
+          <h3 id="diagModalTitle" style="color:var(--gold); margin:0;">AI PR Diagnostic &amp; Solution</h3>
+          <p class="muted small" id="diagModalSubtitle" style="margin:2px 0 0;"></p>
+        </div>
+      </div>
+      <button type="button" class="btn-ghost sm" id="closeDiagModalBtn">✕</button>
+    </div>
+
+    <div class="diagnostic-modal-body" id="diagModalBody">
+      <!-- Loading state -->
+      <div id="diagModalLoading" class="loading" style="min-height:150px;">
+        <div class="spinner"></div>
+        <p class="muted small">Analyzing PR changes, extracting claims, and evaluating errors…</p>
+      </div>
+
+      <!-- Loaded content -->
+      <div id="diagModalContent" hidden>
+        <!-- AI Summary Card -->
+        <div class="diag-section">
+          <h4>📄 What Is There (AI PR Summary)</h4>
+          <p id="diagSummaryText" class="diag-text"></p>
+          <div class="diag-files-tags" id="diagFilesTags"></div>
+        </div>
+
+        <!-- Verification & Error Status -->
+        <div class="diag-section">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+            <h4>⚖️ Verification &amp; Error Detection</h4>
+            <span class="chip" id="diagStatusBadge">Verified</span>
+          </div>
+          <div id="diagIssuesContainer"></div>
+        </div>
+
+        <!-- Action Footer -->
+        <div class="diag-footer">
+          <button type="button" class="btn-gold sm" id="diagRunTriageBtn">⚡ Run Full AST Triage</button>
+          <button type="button" class="btn-outline sm" id="diagCompareBtn">⇄ Open in Compare View</button>
+          <button type="button" class="btn-ghost sm" id="diagCloseBtn">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Templates (cloned by js/app.js) -->
 <template id="tpl-recent"><li class="recent-item"><span class="gh-dot">●</span><div class="grow"><b data-f="title"></b><small data-f="sub"></small></div><div class="r-right"><small data-f="time"></small><span class="chip" data-f="status"></span></div></li></template>
 <template id="tpl-claim"><li class="claim"><span class="num" data-f="num"></span><div class="grow"><b data-f="text"></b><small data-f="where"></small></div><span class="chip" data-f="status"></span><button class="btn-outline sm" data-f="view" type="button">View Details →</button></li></template>
@@ -476,6 +590,7 @@
 <script src="js/api.js"></script>
 <script src="js/code-diff.js"></script>
 <script src="js/feedback.js"></script>
+<script src="js/ai-diagnostic.js"></script>
 <script src="js/app.js"></script>
 <script src="js/pages.js"></script>
 </body>

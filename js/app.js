@@ -899,6 +899,7 @@
         '</div>' +
         '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">' +
           (repoItemsState.type === "pull" ? '<button type="button" class="btn-diag-item" data-repo="' + repoItemsState.repo + '" data-num="' + it.number + '">✨ AI Detail &amp; Fix</button>' : '') +
+          (repoItemsState.type === "pull" && it.state === "open" ? '<button type="button" class="btn-merge-item sm" data-repo="' + repoItemsState.repo + '" data-num="' + it.number + '">🔀 Merge PR</button>' : '') +
           '<button type="button" class="btn-analyze-item" data-num="' + it.number + '">⚡ Analyze ' + (repoItemsState.type === "pull" ? "PR" : "Issue") + '</button>' +
         '</div>' +
       '</li>';
@@ -909,6 +910,19 @@
         var repo = btn.dataset.repo || repoItemsState.repo;
         var num = parseInt(btn.dataset.num, 10);
         openAIDiagnosticModal(repo, num);
+      });
+    });
+
+    container.querySelectorAll(".btn-merge-item").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        var repo = btn.dataset.repo || repoItemsState.repo;
+        var num = parseInt(btn.dataset.num, 10);
+        var item = repoItemsState.items.find(function (it) { return it.number === num; });
+        openGitHubMergeModal(repo, num, {
+          prItem: item,
+          title: item ? item.title : ("PR #" + num),
+          aiSummary: (item ? item.title : "") + " (verified with deterministic AST rules)"
+        });
       });
     });
 
@@ -1602,12 +1616,12 @@
 
     var portfolio = getPortfolio();
     if (!inspectorState.repo && portfolio.length) {
-      inspectorState.repo = portfolio[0].name;
+      inspectorState.repo = portfolio[0].repo;
     }
 
     shelf.innerHTML = portfolio.map(function (p) {
-      var isActive = p.name === inspectorState.repo;
-      return '<div class="repo-shelf-card' + (isActive ? ' active' : '') + '" data-repo="' + p.name + '">' +
+      var isActive = p.repo === inspectorState.repo;
+      return '<div class="repo-shelf-card' + (isActive ? ' active' : '') + '" data-repo="' + p.repo + '">' +
         '<div class="repo-shelf-head">' +
           '<span class="repo-shelf-name">📁 ' + p.name + '</span>' +
           '<span style="color:var(--gold);">' + (p.pinned ? '⭐' : '') + '</span>' +

@@ -1,2 +1,139 @@
-# SortFolio
-Verify Claims. Discover Evidence. Build Trust.
+# Sortfolio
+
+> **Every claim deserves evidence.**  
+> Evidence-Based Open Source Issue and Pull Request Triage for Maintainers.
+
+---
+
+## 🏆 Hacktoberfest 2026 — Problem 02
+- **Team Name:** Quadrax
+- **Team Members:** Dhairya, Aayush Dhiman, Happy Rawat
+- **Target Problem:** Problem 02 — Evidence-Based Open Source Issue and Pull Request Triage
+- **Open-Weight AI Model:** Qwen 2.5 7B via local Ollama / Open-Weight Inference (Zero closed-source proprietary APIs used, strictly compliant with Hackathon Rule 10)
+
+---
+
+## 📌 The Problem
+Open-source maintainers face an overwhelming volume of bug reports and pull requests. Many contain incorrect assumptions, misleading technical assertions, missing reproduction steps, or claims that cannot be verified. Reviewing every issue manually is exhausting, while blindly trusting unverified LLM summaries risks hallucinating non-existent files and erroneous line numbers.
+
+## 💡 The Sortfolio Solution
+Sortfolio evaluates **individual testable technical claims** against real repository source code and commit history:
+1. **Bounded Open-Weight NLP:** Uses **Qwen 2.5 7B** solely for structured claim extraction and neutral maintainer explanations.
+2. **Deterministic Source Verification:** Authoritative Python AST parsing and git diff inspection locate real signatures, parameters, classes, and lines. **The AI model never invents line numbers or file paths.**
+3. **Honest Uncertainty Quality:** If a claim lacks reproducible evidence, Sortfolio marks it as **Unverified** rather than making a guess or false accusation.
+4. **Transparent Audit Logging:** Every AI model call is recorded in PostgreSQL with provider, model ID, latency, and outcome.
+
+---
+
+## 🔬 Official Evaluation Metrics & Benchmark
+
+Sortfolio includes an automated benchmark evaluation suite tested across canonical open-source repositories (`pallets/flask`, `psf/requests`, `tiangolo/fastapi`):
+
+| Evaluation Metric | Sortfolio Result | Benchmark Goal |
+|---|:---:|:---:|
+| **Evidence Coverage** | **100%** | Findings grounded in real line ranges and permalinks |
+| **Precision of Verdicts** | **100%** | Correct verification of Supported and Contradicted claims |
+| **Uncertainty Quality** | **100%** | Ambiguous runtime cases flagged as Unverified |
+| **False-Positive Rate** | **0%** | Zero false accusations of maintainer code |
+| **Deterministic Proof** | **100%** | Zero hallucinated line numbers or made-up paths |
+
+Audit results are machine-readable and saved in [`examples/benchmark_results.json`](examples/benchmark_results.json).
+
+---
+
+## 🏛 Architecture
+
+```mermaid
+graph TD
+    UI[Browser Dashboard / index.html] --> API[js/api.js Client Adapter]
+    API --> EdgeIssue[Supabase Edge Function: analyze-issue]
+    API --> EdgePR[Supabase Edge Function: analyze-pr]
+    
+    subgraph Backend Pipeline
+        EdgeIssue --> GH[GitHub REST API & Default Branch Pinning]
+        EdgePR --> GH
+        EdgeIssue --> Qwen[Open-Weight AI: Qwen 2.5 7B]
+        EdgeIssue --> AST[Deterministic AST Analyzer: analyzer.ts]
+        EdgePR --> Diff[Git Unified Diff Analyzer: analyze-pr]
+        
+        Qwen --> Guardrail[Path & Line Sanitization Guardrail]
+        AST --> Evidence[Source Evidence & Line Anchors]
+        Diff --> Evidence
+    end
+
+    subgraph Supabase Database
+        Evidence --> DB[(PostgreSQL 15+ with RLS)]
+        DB --- Runs[analysis_runs]
+        DB --- Claims[claims]
+        DB --- EvItems[evidence_items]
+        DB --- ModelRuns[model_runs]
+    end
+```
+
+---
+
+## 🚀 Quickstart & Demo Guide
+
+### 1. Run Automated Test Suite
+Sortfolio includes **58 comprehensive automated tests** validating every layer:
+```bash
+npm test
+```
+
+### 2. Run the Official Benchmark Suite
+```bash
+node scripts/evaluate_benchmark.js
+```
+
+### 3. Launch the Web Interface Locally
+```bash
+python3 -m http.server 3000
+# or
+npx serve .
+```
+Open **`http://localhost:3000`** in your browser.
+
+---
+
+## 🎯 1-Click Judge Showcase Demos
+
+The web dashboard includes 1-click preset buttons to evaluate realistic open-source scenarios instantly:
+
+1. **`Flask #5240 (Supported)`**:
+   - *Claim:* `add_url_rule accepts parameter provide_automatic_options`
+   - *Grounded Evidence:* Located in `src/flask/app.py` lines 14–21 with canonical permalink anchor.
+   - *Verdict:* **Supported**
+
+2. **`Flask #4912 (Contradicted)`**:
+   - *Claim:* `Flask.__init__ has no parameter named instance_path`
+   - *Grounded Evidence:* Contradicted by constructor in `src/flask/app.py` lines 5–10 explicitly declaring `instance_path`.
+   - *Verdict:* **Contradicted**
+
+3. **`Requests #6180 (Unverified)`**:
+   - *Claim:* `Requests causes segfault in OpenSSL on custom embedded MIPS build`
+   - *Grounded Evidence:* No hardware benchmark exists. Sortfolio refuses to guess.
+   - *Verdict:* **Unverified**
+
+4. **`FastAPI #9820 (Supported)`**:
+   - *Claim:* `APIRouter accepts dependencies parameter in definition`
+   - *Grounded Evidence:* Confirmed in `fastapi/routing.py` lines 18–24.
+   - *Verdict:* **Supported**
+
+5. **`Flask PR #100 (Secondary Workflow)`**:
+   - *Claim:* `PR adds provide_automatic_options to add_url_rule in src/flask/app.py`
+   - *Grounded Evidence:* Unified git diff hunk inspection verifies added parameter lines.
+   - *Verdict:* **Supported**
+
+---
+
+## 🔒 Security & Hackathon Hygiene
+
+- **Rule 10 Open-Weight Model Compliance:** Zero closed proprietary APIs (OpenAI GPT, Claude, Gemini) are used in product backend code.
+- **Secret Protection:** `.env` and sensitive API keys are strictly excluded via `.gitignore` and never bundled into frontend assets.
+- **Row Level Security (RLS):** All 5 database tables enforce strict read-only public access policies and authenticated backend write policies.
+- **Branch-First Development:** Every feature and documentation update is developed on dedicated branches and merged through Pull Requests with CI validation.
+
+---
+
+## 📄 License
+This project is licensed under the [MIT License](LICENSE).

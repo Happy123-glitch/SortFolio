@@ -30,21 +30,15 @@
   $("logoutBtn").title = "Log out" + (userName ? " (" + userName + ")" : "");
 
   function setView(name) {
+    $$(".view").forEach(function (v) { v.classList.toggle("active", v.id === "view-" + name); });
+    $$(".nav-btn").forEach(function (b) { b.classList.toggle("active", b.dataset.view === name); });
+    window.scrollTo({ top: 0, behavior: "smooth" });
     if (name === "feedback") {
-      name = "home";
-      show($("emptyState"), false);
-      show($("loadingState"), false);
-      show($("resultBody"), true);
-      var fbTab = document.querySelector('.tab[data-tab="feedback"]');
-      if (fbTab) fbTab.click();
       setTimeout(function () {
         var el = $("feedbackText");
         if (el) el.focus();
       }, 100);
     }
-    $$(".view").forEach(function (v) { v.classList.toggle("active", v.id === "view-" + name); });
-    $$(".nav-btn").forEach(function (b) { b.classList.toggle("active", b.dataset.view === name); });
-    window.scrollTo({ top: 0, behavior: "smooth" });
   }
   $("nav").addEventListener("click", function (e) { var b = e.target.closest(".nav-btn"); if (b) setView(b.dataset.view); });
   $$("[data-goto]").forEach(function (b) { b.addEventListener("click", function () { setView(b.dataset.goto); }); });
@@ -1233,8 +1227,6 @@
   if ($("openFeedbackQuickBtn")) {
     $("openFeedbackQuickBtn").addEventListener("click", function () {
       setView("feedback");
-      var p = $("tab-feedback");
-      if (p) p.scrollIntoView({ behavior: "smooth", block: "start" });
     });
   }
 

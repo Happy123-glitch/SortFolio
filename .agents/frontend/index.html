@@ -92,8 +92,12 @@
         <h3 id="repoExplorerTitle">⑂ Repository Pull Requests</h3>
         <p class="muted small" id="repoExplorerSubtitle">Select any pull request to run deterministic triage and AST code verification.</p>
       </div>
-      <button class="btn-ghost sm" type="button" id="repoExplorerCloseBtn" aria-label="Close Explorer">✕ Close</button>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <button class="btn-ghost sm" type="button" id="repoExplorerRefreshBtn" title="Reload PRs from GitHub">🔄 Refresh</button>
+        <button class="btn-ghost sm" type="button" id="repoExplorerCloseBtn" aria-label="Close Explorer">✕ Close</button>
+      </div>
     </div>
+    <div id="repoExplorerStatusBanner"></div>
     <div class="repo-explorer-controls">
       <div class="repo-explorer-filter" id="repoExplorerFilter">
         <button type="button" class="repo-filter-btn active" data-filter="all">All (<span id="countAll">0</span>)</button>
@@ -282,6 +286,7 @@
         </label>
         <input type="search" class="repo-search-input" id="inspectorSearchInput" placeholder="Filter pull requests by title, author, #…" aria-label="Filter pull requests">
       </div>
+      <div id="inspectorStatusBanner"></div>
 
       <div id="inspectorLoading" class="loading" style="min-height:120px;" hidden>
         <div class="spinner" style="width:32px;height:32px;"></div>

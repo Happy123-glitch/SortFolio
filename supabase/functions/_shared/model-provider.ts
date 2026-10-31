@@ -448,3 +448,166 @@ export function generateDeterministicExplanation(
   }
   return `The claim could not be conclusively verified against the source code retrieved from ${filePath}.`;
 }
+
+export interface ChatAssistantResult {
+  reply: string;
+  modelRun: Omit<ModelRun, 'id' | 'run_id' | 'created_at'>;
+}
+
+/**
+ * Task 3: Conversational Triage Assistant.
+ * Answers maintainer questions, explains evidence, or drafts maintainer replies.
+ * Uses Qwen 2.5 7B, strictly grounded in verified report findings.
+ */
+export async function answerTriageQueryWithModel(
+  userQuery: string,
+  contextReport: {
+    repo: string;
+    itemNumber?: number;
+    number?: number;
+    title?: string;
+    claims: Array<{
+      text: string;
+      status: string;
+      where?: string;
+      evidence?: { path: string; start: number; end: number; lines?: Array<[number, string]> } | null;
+    }>;
+  },
+  config: ModelProviderConfig = getModelConfig()
+): Promise<ChatAssistantResult> {
+  const promptVersion = 'v1.0';
+  const startTime = Date.now();
+  const issueNum = contextReport.itemNumber ?? contextReport.number ?? 1;
+
+  const evidenceSummary = contextReport.claims.map((c, i) => {
+    const ev = c.evidence ? `Evidence in ${c.evidence.path} lines ${c.evidence.start}-${c.evidence.end}` : 'No evidence found';
+    return `Claim ${i + 1}: "${c.text}" -> Status: ${c.status} (${c.where || ev})`;
+  }).join('\n');
+
+  const systemPrompt = `You are Sortfolio's AI Triage Assistant for open-source maintainers.
+You assist repository maintainers in reviewing GitHub issues and PRs based ONLY on verified code evidence.
+Rules:
+1. Reference ONLY the provided verified claims, files, and line numbers from ${contextReport.repo} #${issueNum}.
+2. NEVER hallucinate or invent new file paths, line numbers, or test results.
+3. If asked to draft a maintainer reply, write a polite, professional, concise GitHub comment quoting the verified line numbers and explaining why the issue is supported, contradicted, or unverified.
+4. Keep explanations grounded, objective, and transparent.
+5. If information is missing or unverified, state clearly that Sortfolio does not guess.`;
+
+  const userContent = `Repository: ${contextReport.repo} #${issueNum} (${contextReport.title || 'Untitled'})
+Verified Evidence:
+${evidenceSummary}
+
+Maintainer Question:
+${userQuery}`;
+
+  try {
+    const { text, latencyMs } = await callOpenWeightModel(
+      [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userContent },
+      ],
+      config
+    );
+
+    const allowedPath = contextReport.claims[0]?.evidence?.path || '';
+    const sanitizedReply = sanitizeExplanation(text, allowedPath);
+
+    return {
+      reply: sanitizedReply,
+      modelRun: {
+        provider: config.provider,
+        model_id: config.modelId,
+        task: 'general_summary',
+        prompt_version: promptVersion,
+        outcome: 'success',
+        latency_ms: latencyMs,
+      },
+    };
+  } catch {
+    const fallback = generateDeterministicTriageAnswer(userQuery, contextReport);
+    return {
+      reply: fallback,
+      modelRun: {
+        provider: config.provider,
+        model_id: config.modelId,
+        task: 'general_summary',
+        prompt_version: promptVersion,
+        outcome: 'fallback',
+        latency_ms: Date.now() - startTime,
+      },
+    };
+  }
+}
+
+/**
+ * Deterministic Conversational Assistant (Fallback when model inference is unavailable).
+ */
+export function generateDeterministicTriageAnswer(
+  userQuery: string,
+  report: {
+    repo: string;
+    itemNumber?: number;
+    number?: number;
+    claims: Array<{
+      text: string;
+      status: string;
+      where?: string;
+      evidence?: { path: string; start: number; end: number; lines?: Array<[number, string]> } | null;
+    }>;
+  }
+): string {
+  const q = userQuery.toLowerCase();
+  const repo = report.repo;
+  const num = report.itemNumber ?? report.number ?? 1;
+  const claims = report.claims || [];
+
+  if (q.includes('draft') || q.includes('reply') || q.includes('comment') || q.includes('response')) {
+    const supported = claims.filter((c) => c.status.toLowerCase() === 'supported');
+    const contradicted = claims.filter((c) => c.status.toLowerCase() === 'contradicted');
+
+    if (contradicted.length > 0) {
+      const c = contradicted[0];
+      const ev = c.evidence ? `in \`${c.evidence.path}\` (lines ${c.evidence.start}–${c.evidence.end})` : '';
+      return `Here is a suggested maintainer reply:\n\n> Hi @contributor, thank you for filing this issue. We ran deterministic AST verification against ${repo}. The assertion that "${c.text}" appears to be contradicted ${ev}. Please check the latest default branch implementation. If you have an isolated reproducible test case, please share it!`;
+    }
+    if (supported.length > 0) {
+      const c = supported[0];
+      const ev = c.evidence ? `in \`${c.evidence.path}\` (lines ${c.evidence.start}–${c.evidence.end})` : '';
+      return `Here is a suggested maintainer reply:\n\n> Hi @contributor, thank you for your report. We verified your claim "${c.text}" against ${repo} ${ev}. This has been grounded by our static analysis. We've queued this for maintainer review.`;
+    }
+    return `Here is a suggested maintainer reply:\n\n> Hi @contributor, thank you for submitting this report. The reported behavior could not be conclusively verified against the default branch source code without a standalone reproduction environment. Please provide minimal reproduction steps so we can investigate further.`;
+  }
+
+  if (q.includes('contradict') || q.includes('why') || q.includes('invalid') || q.includes('false')) {
+    const contradicted = claims.filter((c) => c.status.toLowerCase() === 'contradicted');
+    if (contradicted.length > 0) {
+      const c = contradicted[0];
+      const ev = c.evidence ? `in ${c.evidence.path} lines ${c.evidence.start}–${c.evidence.end}` : '';
+      return `**Contradiction Details:** The claim "${c.text}" was refuted by deterministic AST inspection ${ev}. The inspected Python signature/definition is present in the repository, directly conflicting with the assertion in the issue.`;
+    }
+  }
+
+  if (q.includes('missing') || q.includes('uncertain') || q.includes('gap') || q.includes('lack')) {
+    const unverified = claims.filter((c) => c.status.toLowerCase() === 'unverified' || c.status.toLowerCase() === 'insufficient');
+    if (unverified.length > 0) {
+      return `**Missing Evidence / Evidence Gaps:**\n• ${unverified.map((c) => c.text).join('\n• ')}\n\n*Why it is unverified:* Sortfolio enforces strict uncertainty quality and does not guess without verified source files or reproduction benchmarks.`;
+    }
+    return `All extracted technical claims for ${repo} #${num} have been verified with complete source evidence coverage.`;
+  }
+
+  if (q.includes('line') || q.includes('where') || q.includes('file') || q.includes('evidence') || q.includes('location')) {
+    const items = claims.filter((c) => c.evidence).map((c) => `• **${c.text}**: Located in \`${c.evidence!.path}\` at lines ${c.evidence!.start}–${c.evidence!.end}.`);
+    if (items.length > 0) {
+      return `**Verified Code Locations:**\n` + items.join('\n');
+    }
+    return `No deterministic source code line anchors were found for the claims in this item.`;
+  }
+
+  return `Sortfolio AI Assistant summary for **${repo} #${num}**:\n` +
+    `• Total Claims Analyzed: **${claims.length}**\n` +
+    `• Supported: **${claims.filter((c) => c.status.toLowerCase() === 'supported').length}**\n` +
+    `• Contradicted: **${claims.filter((c) => c.status.toLowerCase() === 'contradicted').length}**\n` +
+    `• Unverified: **${claims.filter((c) => c.status.toLowerCase() === 'unverified').length}**\n\n` +
+    `Ask me to **draft a maintainer reply**, **explain contradictions**, or **locate verified source lines**!`;
+}
+

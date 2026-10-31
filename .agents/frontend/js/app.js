@@ -329,6 +329,155 @@
     window.open("https://github.com/" + currentReport.repo + "/issues?q=" + encodeURIComponent("is:issue"), "_blank", "noopener");
   });
 
+  /* ---------- Sortfolio AI Assistant Chatbot ---------- */
+  var chatDrawer = $("chatDrawer");
+  var chatFab = $("chatFab");
+  var chatCloseBtn = $("chatCloseBtn");
+  var chatForm = $("chatForm");
+  var chatInput = $("chatInput");
+  var chatFeed = $("chatFeed");
+  var chatContextRepo = $("chatContextRepo");
+
+  function toggleChat(open) {
+    if (!chatDrawer) return;
+    var willOpen = typeof open === "boolean" ? open : chatDrawer.hidden;
+    show(chatDrawer, willOpen);
+    if (willOpen) {
+      if (chatInput) chatInput.focus();
+      var active = currentReport || (window.DEMO && window.DEMO.report);
+      if (active && chatContextRepo) {
+        chatContextRepo.textContent = active.repo + " #" + (active.number || active.item_number || 42);
+      }
+    }
+  }
+
+  if (chatFab) chatFab.addEventListener("click", function () { toggleChat(); });
+  if (chatCloseBtn) chatCloseBtn.addEventListener("click", function () { toggleChat(false); });
+
+  function addChatMessage(role, text) {
+    if (!chatFeed) return;
+    var msg = document.createElement("div");
+    msg.className = "chat-msg " + role;
+    msg.textContent = text;
+    chatFeed.appendChild(msg);
+    chatFeed.scrollTop = chatFeed.scrollHeight;
+  }
+
+  function generateClientTriageAnswer(userQuery, report) {
+    var q = userQuery.toLowerCase();
+    var repo = report.repo || "inspected-repo";
+    var num = report.number || report.item_number || "target";
+    var claims = report.claims || [];
+
+    if (q.includes("draft") || q.includes("reply") || q.includes("comment") || q.includes("response")) {
+      var contradicted = claims.filter(function (c) { return String(c.status).toLowerCase() === "contradicted"; });
+      var supported = claims.filter(function (c) { return String(c.status).toLowerCase() === "supported"; });
+
+      if (contradicted.length > 0) {
+        var c = contradicted[0];
+        var ev = c.evidence ? "in `" + c.evidence.path + "` (lines " + c.evidence.start + "–" + c.evidence.end + ")" : "";
+        return "Suggested maintainer reply:\n\n> Hi @contributor, thank you for filing this issue. We ran deterministic AST verification against " + repo + ". The assertion that \"" + c.text + "\" appears to be contradicted " + ev + ". Please check the latest default branch implementation. If you have an isolated reproducible test case, please share it!";
+      }
+      if (supported.length > 0) {
+        var s = supported[0];
+        var sev = s.evidence ? "in `" + s.evidence.path + "` (lines " + s.evidence.start + "–" + s.evidence.end + ")" : "";
+        return "Suggested maintainer reply:\n\n> Hi @contributor, thank you for your report. We verified your claim \"" + s.text + "\" against " + repo + " " + sev + ". This has been grounded by our static analysis. We have queued this for review.";
+      }
+      return "Suggested maintainer reply:\n\n> Hi @contributor, thank you for submitting this report. The reported behavior could not be conclusively verified against the default branch source code without a standalone reproduction environment. Please provide minimal reproduction steps so we can investigate further.";
+    }
+
+    if (q.includes("contradict") || q.includes("why") || q.includes("invalid") || q.includes("false")) {
+      var contra = claims.filter(function (c) { return String(c.status).toLowerCase() === "contradicted"; });
+      if (contra.length > 0) {
+        var cc = contra[0];
+        var ccev = cc.evidence ? "in " + cc.evidence.path + " lines " + cc.evidence.start + "–" + cc.evidence.end : "";
+        return "Contradiction Details: The claim \"" + cc.text + "\" was refuted by deterministic AST inspection " + ccev + ". The inspected Python definition is present in the repository, directly conflicting with the claim in the issue.";
+      }
+    }
+
+    if (q.includes("line") || q.includes("where") || q.includes("file") || q.includes("evidence")) {
+      var evItems = claims.filter(function (c) { return c.evidence; }).map(function (c) {
+        return "• \"" + c.text + "\": Located in `" + c.evidence.path + "` at lines " + c.evidence.start + "–" + c.evidence.end + ".";
+      });
+      if (evItems.length > 0) return "Verified Code Locations:\n" + evItems.join("\n");
+      return "No deterministic source code line anchors were found for the claims in this item.";
+    }
+
+    if (q.includes("missing") || q.includes("uncertain") || q.includes("gap")) {
+      var unv = claims.filter(function (c) { return ["unverified", "insufficient"].indexOf(String(c.status).toLowerCase()) !== -1; });
+      if (unv.length > 0) {
+        return "Missing Evidence / Evidence Gaps:\n• " + unv.map(function (c) { return c.text; }).join("\n• ") + "\n\nWhy it is unverified: Sortfolio enforces strict uncertainty quality and does not guess without verified source files or reproduction benchmarks.";
+      }
+      return "All extracted technical claims for " + repo + " #" + num + " have complete verified source evidence coverage.";
+    }
+
+    return "Sortfolio AI Assistant summary for " + repo + " #" + num + ":\n" +
+      "• Total Claims: " + claims.length + "\n" +
+      "• Supported: " + claims.filter(function (c) { return String(c.status).toLowerCase() === "supported"; }).length + "\n" +
+      "• Contradicted: " + claims.filter(function (c) { return String(c.status).toLowerCase() === "contradicted"; }).length + "\n" +
+      "• Unverified: " + claims.filter(function (c) { return String(c.status).toLowerCase() === "unverified"; }).length + "\n\n" +
+      "You can ask me to draft a maintainer reply, explain contradictions, or show verified source code lines!";
+  }
+
+  async function handleUserChatMessage(text) {
+    if (!text || !text.trim()) return;
+    var userText = text.trim();
+    addChatMessage("user", userText);
+    if (chatInput) chatInput.value = "";
+
+    var activeReport = currentReport || (window.DEMO && window.DEMO.report);
+    if (!activeReport) {
+      addChatMessage("assistant", "Please run or select an analysis first so I can inspect its verified code evidence!");
+      return;
+    }
+
+    var typing = document.createElement("div");
+    typing.className = "chat-msg assistant";
+    typing.textContent = "Synthesizing answer from verified evidence…";
+    chatFeed.appendChild(typing);
+    chatFeed.scrollTop = chatFeed.scrollHeight;
+
+    try {
+      var supabaseUrl = window.SF_SUPABASE_URL || localStorage.getItem("sf_supabase_url");
+      var supabaseAnonKey = window.SF_SUPABASE_KEY || localStorage.getItem("sf_supabase_key");
+      var reply = "";
+
+      if (supabaseUrl && supabaseAnonKey && window.SortfolioAPI) {
+        try {
+          var api = new window.SortfolioAPI({ supabaseUrl: supabaseUrl, supabaseAnonKey: supabaseAnonKey });
+          var res = await api.askAssistant(userText, activeReport);
+          if (res && res.reply) reply = res.reply;
+        } catch (e) {
+          console.warn("Backend chat-assistant call fallback to client:", e);
+        }
+      }
+
+      if (!reply) {
+        await wait(350);
+        reply = generateClientTriageAnswer(userText, activeReport);
+      }
+
+      typing.textContent = reply;
+    } catch (err) {
+      typing.textContent = "Error: " + err.message;
+    }
+    chatFeed.scrollTop = chatFeed.scrollHeight;
+  }
+
+  if (chatForm) {
+    chatForm.addEventListener("submit", function (e) {
+      e.preventDefault();
+      if (chatInput) handleUserChatMessage(chatInput.value);
+    });
+  }
+
+  $$(".chat-pill").forEach(function (pill) {
+    pill.addEventListener("click", function () {
+      var p = pill.dataset.prompt;
+      if (p) handleUserChatMessage(p);
+    });
+  });
+
   if (mode === "demo") { $("repoUrl").value = "https://github.com/octocat/hello-world"; $("itemNum").value = 42; }
   window.SF = { getHistory: getHistory, setHistory: setHistory, renderHistory: renderHistory, modeLabel: modeLabel, demo: mode === "demo", onHistory: null };
   renderHistory();

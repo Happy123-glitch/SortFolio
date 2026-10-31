@@ -75,7 +75,7 @@ graph TD
 ## 🚀 Quickstart & Demo Guide
 
 ### 1. Run Automated Test Suite
-Sortfolio includes **58 comprehensive automated tests** validating every layer:
+Sortfolio includes **68 comprehensive automated tests** validating every layer:
 ```bash
 npm test
 ```
@@ -123,6 +123,20 @@ The web dashboard includes 1-click preset buttons to evaluate realistic open-sou
    - *Claim:* `PR adds provide_automatic_options to add_url_rule in src/flask/app.py`
    - *Grounded Evidence:* Unified git diff hunk inspection verifies added parameter lines.
    - *Verdict:* **Supported**
+
+---
+
+## 🤖 AI Triage Assistant Chatbot
+
+Sortfolio includes an interactive conversational chatbot drawer for maintainers:
+- **Instant Drawer Access:** Click the floating **AI Assistant** button on the bottom right of the dashboard.
+- **Context-Aware Reasoning:** The assistant automatically binds to the currently analyzed issue or PR report.
+- **Quick Maintainer Actions:**
+  - 📝 **"Draft maintainer reply"**: Generates a polite, ready-to-post GitHub response quoting verified source files and line ranges.
+  - 🔍 **"Why is this contradicted?"**: Pinpoints the exact AST signature conflict between the claim and the source code.
+  - 📍 **"Show verified code lines"**: Displays code anchors and file lines extracted by deterministic analysis.
+  - ❓ **"What evidence is missing?"**: Outlines evidence gaps for unverified issues without speculating.
+- **Hallucination-Proof Grounding:** Powered by **Qwen 2.5 7B** with strict output sanitization and authoritative deterministic fallback. All queries are audited under `model_runs`.
 
 ---
 

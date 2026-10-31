@@ -1,0 +1,54 @@
+{
+  "timestamp": "2026-10-31T18:57:37.345Z",
+  "totalCases": 4,
+  "precisionPercent": 100,
+  "uncertaintyQualityPercent": 100,
+  "evidenceCoveragePercent": 100,
+  "falsePositiveRatePercent": 0,
+  "cases": [
+    {
+      "id": "sample-flask-supported",
+      "title": "Flask: add_url_rule parameter verification",
+      "repo": "pallets/flask",
+      "expected": "supported",
+      "observed": "supported",
+      "pass": true,
+      "hasTraceableEvidence": true,
+      "evidenceLines": "12–19",
+      "latencyMs": 6.17
+    },
+    {
+      "id": "sample-flask-contradicted",
+      "title": "Flask: False claim about instance_path absence",
+      "repo": "pallets/flask",
+      "expected": "contradicted",
+      "observed": "contradicted",
+      "pass": true,
+      "hasTraceableEvidence": true,
+      "evidenceLines": "3–8",
+      "latencyMs": 0.25
+    },
+    {
+      "id": "sample-runtime-unverified",
+      "title": "Requests: Vague OS-specific runtime crash",
+      "repo": "psf/requests",
+      "expected": "unverified",
+      "observed": "unverified",
+      "pass": true,
+      "hasTraceableEvidence": false,
+      "evidenceLines": "N/A",
+      "latencyMs": 0.67
+    },
+    {
+      "id": "sample-fastapi-supported",
+      "title": "FastAPI: APIRouter dependencies declaration",
+      "repo": "tiangolo/fastapi",
+      "expected": "supported",
+      "observed": "supported",
+      "pass": true,
+      "hasTraceableEvidence": true,
+      "evidenceLines": "2–2",
+      "latencyMs": 0.14
+    }
+  ]
+}

@@ -2,18 +2,20 @@
 
 Describe the functionality, improvements, or fixes introduced by this pull request.
 
-## Models the product uses in this PR
+## AI models used by the project
 
-Mention the open-source or open-weight AI models used in this implementation.
+List the exact model names and what each model does in the project. Write
+`None` if the project does not use an AI model. Do not list planned or
+unused models as integrated.
 
-Example: gemma4:e4b via Ollama or none.
+Example: `Qwen3-4B` via Ollama — extracts candidate claims; or `None`.
 
-## AI coding assistants that helped write it
+## AI coding assistants used
 
-Mention the AI coding assistants used during development.
-
-Example: GitHub Copilot, Cursor, Claude Code, or none.
+List the AI coding assistant(s) that helped with this change. Write
+`None` if no AI coding assistant was used.
 
 ## How we tested it
 
-Describe the tests performed and the expected results.
+List the exact test/CI commands run and their results. Explain any
+validation that could not be run.

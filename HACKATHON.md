@@ -57,6 +57,101 @@ can make informed decisions.
 An unsupported claim is not automatically false. If evidence is missing,
 inaccessible, ambiguous, or outside the analyzer's supported scope,
 Sortfolio should report **Unverified** rather than guess.
+## New Features and Differentiators
+
+Sortfolio will extend its core evidence-based claim verification workflow with the following features. These additions are designed to help maintainers understand how a claim was assessed, inspect its evidence, and identify what remains unverified.
+
+### 1. Evidence Graph
+
+**Purpose:** Show the relationship between a technical claim and the evidence collected for it.
+
+The Evidence Graph will connect:
+- The original claim from a GitHub issue or pull request.
+- Relevant source files and code locations.
+- Related documentation.
+- Existing tests and their recorded results.
+- The final assessment and its limitations.
+
+Only relationships supported by retrieved repository data will be displayed. The graph must not invent evidence or imply that a relationship proves a claim automatically.
+
+### 2. Reproducibility Lab
+
+**Purpose:** Help maintainers inspect attempts to reproduce a reported bug.
+
+The Reproducibility Lab will display:
+- The behaviour being investigated.
+- The test or check attempted.
+- Whether execution was attempted.
+- Actual test output and exit status, when available.
+- The environment and conditions used.
+- Limitations or reasons a test could not run.
+
+Possible outcomes include **Reproduced**, **Not Reproduced**, **Not Attempted**, and **Execution Failed**.
+
+A failure to reproduce a bug does not automatically mean the claim is false.
+
+Unknown contributor code must never run inside the main application or Supabase Edge Function. Reproduction requires a separate, isolated execution environment without secrets or network access. If that environment is unavailable, Sortfolio will rely on supported static checks and clearly disclose the limitation.
+
+### 3. Fix and Version Tracker
+
+**Purpose:** Help maintainers investigate whether a reported problem may already have been addressed.
+
+Where evidence is available, Sortfolio will identify:
+- Potentially related commits and pull requests.
+- Changes to relevant source files.
+- Tests associated with a possible fix.
+- The commit or branch inspected.
+- Whether evidence establishes that the fix is present in the affected version.
+
+A merged pull request alone is not sufficient proof that a bug is fixed in every version. Sortfolio must explain uncertainty when the connection between a reported issue and a proposed fix cannot be established.
+
+This feature is planned as a later enhancement if time permits.
+
+### 4. Evidence Gap Detector
+
+**Purpose:** Explain why a technical claim cannot yet be verified and what additional evidence could help.
+
+Examples of missing evidence include:
+- No relevant source file could be retrieved.
+- No suitable test or reproduction steps are available.
+- A performance claim lacks comparable benchmark results.
+- The affected software version is unknown.
+- The available code does not establish the reported runtime behaviour.
+
+For each evidence gap, Sortfolio will explain what is missing and suggest a relevant next step.
+
+The system must not invent missing results or change an Unverified assessment into a definite verdict without adequate evidence.
+
+### 5. Evidence Timeline
+
+**Purpose:** Present relevant events in chronological order when their timestamps and relationships can be established.
+
+Possible timeline events include:
+- Issue creation.
+- Relevant commit creation.
+- Pull request creation or merge.
+- Changes to related source files.
+- Test execution during the current analysis.
+
+Each event must link to its actual source where possible. Sortfolio must distinguish historical repository events from checks performed during the current analysis.
+
+### Implementation Priority
+
+**MVP — Required first:**
+1. Claim-by-claim assessment.
+2. Traceable source evidence.
+3. Clear explanations of missing evidence and uncertainty.
+
+**Next — Strong differentiators:**
+1. Evidence Graph.
+2. Evidence Gap Detector.
+3. Reproducibility Lab, only when safe execution is available.
+
+**Later — If time permits:**
+1. Fix and Version Tracker.
+2. Evidence Timeline.
+
+The existing issue-analysis workflow remains the priority. New features must reuse the existing claim and evidence data rather than duplicate the analysis pipeline.
 
 ## AI Models and Why We Use Them
 

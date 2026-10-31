@@ -75,8 +75,20 @@ graph TD
 
 ## 🚀 Quickstart & Demo Guide
 
+### Configure accounts and profile syncing
+
+Login, registration, and database-backed demo profiles use Supabase Auth. Before using these flows:
+
+1. Apply [`supabase/migrations/20261101000000_profiles.sql`](supabase/migrations/20261101000000_profiles.sql) to your Supabase project.
+2. In `js/supabase-config.js`, set `SF_SUPABASE_URL` to your project URL and `SF_SUPABASE_KEY` to its **public anon/publishable key**. Never put a service-role key in browser code.
+3. Enable anonymous sign-ins in Supabase Auth if you want demo profile edits saved to the database. Without Supabase configuration, demo analysis still works, but demo profile edits are stored only in that browser.
+4. If email confirmation is enabled, new users must verify their email before signing in.
+
+Profiles are protected by row-level security: authenticated users can only read or update their own profile. Email/password account changes are handled by Supabase Auth.
+Accounts created by the old browser-only login are not Supabase accounts; users need to register again after configuring Supabase.
+
 ### 1. Run Automated Test Suite
-Sortfolio includes **83 comprehensive automated tests** validating every layer:
+Sortfolio includes **115 automated tests** validating every layer:
 ```bash
 npm test
 ```
@@ -160,7 +172,7 @@ Sortfolio features a persistent **Multi-Repository Portfolio** right on the dash
 
 - **Rule 10 Open-Weight Model Compliance:** Zero closed proprietary APIs (OpenAI GPT, Claude, Gemini) are used in product backend code.
 - **Secret Protection:** `.env` and sensitive API keys are strictly excluded via `.gitignore` and never bundled into frontend assets.
-- **Row Level Security (RLS):** All 5 database tables enforce strict read-only public access policies and authenticated backend write policies.
+- **Row Level Security (RLS):** Account profiles are accessible only to their owning authenticated user; analysis tables retain their completed-analysis and service-role policies.
 - **Branch-First Development:** Every feature and documentation update is developed on dedicated branches and merged through Pull Requests with CI validation.
 
 ---

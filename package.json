@@ -5,8 +5,12 @@
   "type": "module",
   "main": "js/app.js",
   "scripts": {
+    "start": "node --experimental-strip-types server.js",
     "test": "node --experimental-strip-types --test tests/**/*.test.js",
     "evaluate": "node --experimental-strip-types scripts/evaluate_benchmark.js"
+  },
+  "engines": {
+    "node": ">=20.0.0"
   },
   "keywords": [
     "triage",

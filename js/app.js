@@ -652,6 +652,13 @@
 
   function getFallbackRepoItems(repo, type) {
     var r = (repo || "").toLowerCase().trim();
+    if (!r.includes("/")) {
+      var found = getPortfolio().find(function (p) {
+        return (p.name && p.name.toLowerCase() === r) ||
+               (p.repo && p.repo.toLowerCase().endsWith("/" + r));
+      });
+      if (found && found.repo) r = found.repo.toLowerCase();
+    }
     if (type === "pull") {
       if (r === "me-agrim-rehan/reachable-vulnerability") {
         return [
@@ -1615,15 +1622,18 @@
     if (!shelf) return;
 
     var portfolio = getPortfolio();
-    if (!inspectorState.repo && portfolio.length) {
-      inspectorState.repo = portfolio[0].repo;
+    if (portfolio.length && (!inspectorState.repo || !inspectorState.repo.includes("/"))) {
+      var initial = portfolio[0];
+      inspectorState.repo = initial.repo || (initial.owner ? initial.owner + "/" + initial.name : initial.name);
     }
 
     shelf.innerHTML = portfolio.map(function (p) {
-      var isActive = p.repo === inspectorState.repo;
-      return '<div class="repo-shelf-card' + (isActive ? ' active' : '') + '" data-repo="' + p.repo + '">' +
+      var repoKey = p.repo || (p.owner ? p.owner + "/" + p.name : p.name);
+      var isActive = repoKey === inspectorState.repo;
+      var ownerLabel = p.owner ? '<span style="font-size:11px;color:var(--muted);display:block;">@' + p.owner + '</span>' : '';
+      return '<div class="repo-shelf-card' + (isActive ? ' active' : '') + '" data-repo="' + repoKey + '">' +
         '<div class="repo-shelf-head">' +
-          '<span class="repo-shelf-name">📁 ' + p.name + '</span>' +
+          '<span class="repo-shelf-name">📁 ' + ownerLabel + p.name + '</span>' +
           '<span style="color:var(--gold);">' + (p.pinned ? '⭐' : '') + '</span>' +
         '</div>' +
         '<div class="repo-shelf-badges">' +
@@ -1650,6 +1660,14 @@
   }
 
   async function loadInspectorPRs(repo) {
+    if (!repo) return;
+    if (!repo.includes("/")) {
+      var match = getPortfolio().find(function (p) {
+        return (p.name && p.name.toLowerCase() === repo.toLowerCase()) ||
+               (p.repo && p.repo.toLowerCase().endsWith("/" + repo.toLowerCase()));
+      });
+      if (match && match.repo) repo = match.repo;
+    }
     inspectorState.repo = repo;
     inspectorState.items = [];
     inspectorState.isOfficial = false;

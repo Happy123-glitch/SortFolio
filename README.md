@@ -100,11 +100,18 @@ node scripts/evaluate_benchmark.js
 
 ### 3. Launch the Web Interface Locally
 ```bash
+npm start
+# or
 python3 -m http.server 3000
 # or
 npx serve .
 ```
 Open **`http://localhost:3000`** in your browser.
+
+### 4. Deploy to Render (Frontend & Backend)
+Sortfolio includes unified Node server and Render blueprint configuration (`render.yaml`):
+- **Frontend Static Site:** Deployed at `https://sortfolio-frontend.onrender.com`
+- **Backend Web Service:** Deployed at `https://sortfolio-backend.onrender.com` (includes `/health`, `/functions/v1/analyze-issue`, `/functions/v1/analyze-pr`, and `/functions/v1/chat-assistant`)
 
 ---
 
